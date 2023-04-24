@@ -1,27 +1,64 @@
+/*
+ * @Author      : Mr.bin
+ * @Date        : 2023-02-27 10:27:06
+ * @LastEditTime: 2023-04-20 16:13:44
+ * @Description : 路由
+ */
 import Vue from 'vue'
 import VueRouter from 'vue-router'
-import Home from '../views/Home.vue'
 
 Vue.use(VueRouter)
 
+// 解决ElementUI导航栏中的vue-router在3.0版本以上重复点菜单报错问题
+const originalPush = VueRouter.prototype.push
+VueRouter.prototype.push = function push(location) {
+  return originalPush.call(this, location).catch(err => err)
+}
+
 const routes = [
+  /* 首页 */
   {
     path: '/',
-    name: 'Home',
-    component: Home
+    name: 'home',
+    component: () => import('@/views/home')
   },
+  /* 压力调零 */
   {
-    path: '/about',
-    name: 'About',
-    // route level code-splitting
-    // this generates a separate chunk (about.[hash].js) for this route
-    // which is lazy-loaded when the route is visited.
-    component: () => import(/* webpackChunkName: "about" */ '../views/About.vue')
+    path: '/set-zero',
+    name: 'set-zero',
+    component: () => import('@/views/set-zero')
+  },
+  /* 设置COM口 */
+  {
+    path: '/set-com',
+    name: 'set-com',
+    component: () => import('@/views/set-com')
+  },
+  /* 设置参数（导程、减速比） */
+  {
+    path: '/set-parameter',
+    name: 'set-parameter',
+    component: () => import('@/views/set-parameter')
+  },
+
+  {
+    path: '/refresh',
+    name: 'refresh',
+    component: () => import('@/views/refresh')
+  },
+
+  {
+    path: '*',
+    redirect: '/'
   }
 ]
 
 const router = new VueRouter({
-  routes
+  routes,
+  /* 自定义路由切换时页面如何滚动 */
+  scrollBehavior(to, from, savedPosition) {
+    return { x: 0, y: 0 } // 回到顶部
+  }
 })
 
 export default router
