@@ -1,7 +1,7 @@
 /*
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 10:27:06
- * @LastEditTime: 2023-04-20 16:13:44
+ * @LastEditTime: 2023-05-16 11:15:26
  * @Description : 路由
  */
 import Vue from 'vue'
@@ -39,6 +39,12 @@ const routes = [
     path: '/set-parameter',
     name: 'set-parameter',
     component: () => import('@/views/set-parameter')
+  },
+  /* 寿命测试 */
+  {
+    path: '/life-test',
+    name: 'life-test',
+    component: () => import('@/views/life-test')
   },
 
   {

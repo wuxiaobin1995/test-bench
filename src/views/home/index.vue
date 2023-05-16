@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 10:42:11
- * @LastEditTime: 2023-04-24 09:07:32
+ * @LastEditTime: 2023-05-16 21:08:20
  * @Description : home
 -->
 <template>
@@ -10,16 +10,16 @@
       <div class="top">
         <div class="btn">
           <el-button type="primary" class="item" @click="handleOpenReceive"
-            >开启</el-button
+            >开 启</el-button
           >
           <el-button type="danger" class="item" @click="handleCloseReceive"
-            >关闭</el-button
+            >关 闭</el-button
           >
           <el-button type="info" class="item" @click="handleRefresh"
-            >刷新</el-button
+            >刷 新 页 面</el-button
           >
           <el-button type="success" class="item" @click="handleToZero"
-            >调零</el-button
+            >调 零</el-button
           >
         </div>
 
@@ -37,8 +37,12 @@
         </div>
       </div>
 
-      <div class="chart">
-        <div id="chart" :style="{ width: '100%', height: '100%' }"></div>
+      <div class="chart-one">
+        <div id="chartOne" :style="{ width: '100%', height: '100%' }"></div>
+      </div>
+
+      <div class="chart-two">
+        <div id="chartTwo" :style="{ width: '100%', height: '100%' }"></div>
       </div>
     </div>
 
@@ -55,6 +59,9 @@
         >
         <el-button type="info" class="item" @click="handleToParameter"
           >设置参数</el-button
+        >
+        <el-button type="info" class="item" @click="handleToLifeTest"
+          >寿命测试</el-button
         >
       </div>
 
@@ -192,9 +199,13 @@ export default {
       comSendSmall: '',
 
       /* 图形相关变量 */
-      myChart: null,
-      option: {},
-      xData: [], // 横坐标数组
+      myChartOne: null,
+      optionOne: {},
+      xDataOne: [],
+
+      myChartTwo: null,
+      optionTwo: {},
+      xDataTwo: [],
 
       oneStandard: 0,
       twoStandard: 0,
@@ -243,7 +254,8 @@ export default {
     )
   },
   mounted() {
-    this.initChart()
+    this.initChartOne()
+    this.initChartTwo()
 
     setTimeout(() => {
       if (this.comReceive && this.comSendMiniature && this.comSendSmall) {
@@ -379,11 +391,14 @@ export default {
                 this.pressureArrayTwo = []
               }
               // 渲染图形
-              this.option.series[0].data = this.displacementArrayOne
-              this.option.series[1].data = this.pressureArrayOne
-              this.option.series[2].data = this.displacementArrayTwo
-              this.option.series[3].data = this.pressureArrayTwo
-              this.myChart.setOption(this.option)
+              this.optionOne.series[0].data = this.displacementArrayOne
+              this.optionOne.series[2].data = this.displacementArrayTwo
+
+              this.optionTwo.series[0].data = this.pressureArrayOne
+              this.optionTwo.series[1].data = this.pressureArrayTwo
+
+              this.myChartOne.setOption(this.optionOne)
+              this.myChartTwo.setOption(this.optionTwo)
             })
           } else {
             this.$alert(
@@ -595,22 +610,25 @@ export default {
     },
 
     /**
-     * @description: 初始化echarts图形
+     * @description: 初始化图形1
      */
-    initChart() {
+    initChartOne() {
       // 计算横坐标数组
-      this.xData = []
+      this.xDataOne = []
       for (let i = 0; i < 200; i++) {
-        this.xData.push(parseFloat((i * 0.1).toFixed(1)))
+        this.xDataOne.push(parseFloat((i * 0.1).toFixed(1)))
       }
 
-      this.myChart = this.$echarts.init(document.getElementById('chart'))
+      this.myChartOne = this.$echarts.init(document.getElementById('chartOne'))
 
-      this.option = {
+      this.optionOne = {
+        title: {
+          text: '位移'
+        },
         xAxis: {
           type: 'category',
           name: '秒',
-          data: this.xData
+          data: this.xDataOne
         },
         yAxis: {
           type: 'value',
@@ -630,18 +648,51 @@ export default {
             color: 'blue',
             smooth: true,
             showSymbol: false
-          },
+          }
+        ],
+        animation: false
+      }
+
+      this.myChartOne.setOption(this.optionOne)
+    },
+
+    /**
+     * @description: 初始化图形2
+     */
+    initChartTwo() {
+      // 计算横坐标数组
+      this.xDataTwo = []
+      for (let i = 0; i < 200; i++) {
+        this.xDataTwo.push(parseFloat((i * 0.1).toFixed(1)))
+      }
+
+      this.myChartTwo = this.$echarts.init(document.getElementById('chartTwo'))
+
+      this.optionTwo = {
+        title: {
+          text: '压力'
+        },
+        xAxis: {
+          type: 'category',
+          name: '秒',
+          data: this.xDataTwo
+        },
+        yAxis: {
+          type: 'value',
+          min: 0
+        },
+        series: [
           {
             data: [],
             type: 'line',
-            color: 'yellow',
+            color: 'red',
             smooth: true,
             showSymbol: false
           },
           {
             data: [],
             type: 'line',
-            color: 'green',
+            color: 'blue',
             smooth: true,
             showSymbol: false
           }
@@ -649,7 +700,7 @@ export default {
         animation: false
       }
 
-      this.myChart.setOption(this.option)
+      this.myChartTwo.setOption(this.optionTwo)
     },
 
     /**
@@ -712,6 +763,15 @@ export default {
     },
 
     /**
+     * @description: 前往寿命测试页
+     */
+    handleToLifeTest() {
+      this.$router.push({
+        path: '/life-test'
+      })
+    },
+
+    /**
      * @description: 刷新页面
      */
     handleRefresh() {
@@ -728,9 +788,6 @@ export default {
      * @description: 发送微型电缸指令
      */
     handleSendMiniature() {
-      // const leadMin = this.leadMin // 导程
-      // const reductionMin = this.reductionMin // 减速比
-
       const absoluteValueMiniature = this.absoluteValueMiniature
       const relativeValueMiniature = this.relativeValueMiniature
       const torsionMiniature = this.torsionMiniature
@@ -819,9 +876,6 @@ export default {
      * @description: 发送小型电缸指令
      */
     handleSendSmall() {
-      // const leadSmall = this.leadSmall // 导程
-      // const reductionSmall = this.reductionSmall // 减速比
-
       const absoluteValueSmall = this.absoluteValueSmall
       const relativeValueSmall = this.relativeValueSmall
       const torsionSmall = this.torsionSmall
@@ -919,9 +973,10 @@ export default {
     .top {
       @include flex(column, stretch, center);
       .btn {
+        width: 100%;
+        @include flex(row, space-around, center);
         .item {
-          margin: 0 40px;
-          font-size: 26px;
+          font-size: 16px;
         }
       }
       .content {
@@ -935,17 +990,21 @@ export default {
       }
     }
 
-    .chart {
-      flex: 1;
+    .chart-one {
+      height: 100%;
+    }
+    .chart-two {
+      height: 100%;
     }
   }
 
   .right {
     width: 50%;
     .btn {
+      width: 100%;
+      @include flex(row, space-around, center);
       .item {
-        margin: 0 20px;
-        font-size: 26px;
+        font-size: 16px;
       }
     }
 
