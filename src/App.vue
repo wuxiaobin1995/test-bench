@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 11:15:35
- * @LastEditTime: 2023-05-18 09:30:43
+ * @LastEditTime: 2023-05-18 17:02:05
  * @Description : 根组件
 -->
 <template>
@@ -24,7 +24,7 @@ export default {
     }
     /* 初始化导程-小型 */
     if (!window.localStorage.getItem('lead-small')) {
-      window.localStorage.setItem('lead-small', JSON.stringify(5))
+      window.localStorage.setItem('lead-small', JSON.stringify(2.5))
     }
     /* 初始化减速比-微型 */
     if (!window.localStorage.getItem('reduction-min')) {

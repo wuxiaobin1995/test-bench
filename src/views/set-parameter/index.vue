@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-04-18 09:57:41
- * @LastEditTime: 2023-04-20 17:35:52
+ * @LastEditTime: 2023-05-18 17:02:17
  * @Description : 设置参数（导程、减速比）
 -->
 <template>
@@ -89,7 +89,7 @@ export default {
     return {
       // 导程
       leadMin: 2.5,
-      leadSmall: 5,
+      leadSmall: 2.5,
       // 减速比
       reductionMin: 1,
       reductionSmall: 7

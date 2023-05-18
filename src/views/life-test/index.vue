@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-05-18 11:51:43
+ * @LastEditTime: 2023-05-18 16:42:25
  * @Description : 寿命测试
 -->
 <template>
@@ -359,11 +359,17 @@ export default {
               const dataArray = data.split(',')
               const dataOne = dataArray[0] // 微型
               const dataTwo = dataArray[1] // 小型
+              const dataThree = dataArray[2] // 越过某个距离，0->1一次
               const dataArrayOne = dataOne.split(' ')
-              const dataArraytwo = dataTwo.split(' ')
+              const dataArrayTwo = dataTwo.split(' ')
+              const dataArrayThree = dataThree.split(' ')
 
               this.displacementMiniature = parseFloat(dataArrayOne[0]) // 位移（微型）
-              this.displacementSmall = parseFloat(dataArraytwo[0]) // 位移（小型）
+              this.displacementSmall = parseFloat(dataArrayTwo[0]) // 位移（小型）
+
+              const numIsMiniature = parseFloat(dataArrayThree[0])
+              const numIsSmall = parseFloat(dataArrayThree[1])
+              console.log('微型：', numIsMiniature, ' 小型：', numIsSmall)
 
               /* 微型电缸往复运动 */
               // 判断是否归零
@@ -390,14 +396,15 @@ export default {
                   } else if (
                     Math.abs(
                       this.displacementMiniature - absoluteSetMiniature
-                    ) <= 5
+                    ) <= 5 &&
+                    numIsMiniature === 1
                   ) {
                     // 走到设定位置，让它收回
                     this.zeroMiniature()
                   }
 
                   /* 计算往复次数 */
-                  if (this.displacementMiniature <= 100) {
+                  if (numIsMiniature === 1) {
                     this.numMiniature = this.numMiniature + 1
                   }
                 }
@@ -423,14 +430,15 @@ export default {
                     // 归到0，让它推出
                     this.positionSmall()
                   } else if (
-                    Math.abs(this.displacementSmall - absoluteSetSmall) <= 5
+                    Math.abs(this.displacementSmall - absoluteSetSmall) <= 5 &&
+                    numIsSmall === 1
                   ) {
                     // 走到设定位置，让它收回
                     this.zeroSmall()
                   }
 
                   /* 计算往复次数 */
-                  if (this.displacementSmall <= 100) {
+                  if (numIsSmall === 1) {
                     this.numSmall = this.numSmall + 1
                   }
                 }

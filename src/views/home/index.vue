@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 10:42:11
- * @LastEditTime: 2023-05-18 11:59:06
+ * @LastEditTime: 2023-05-18 15:32:02
  * @Description : home
 -->
 <template>
@@ -365,13 +365,13 @@ export default {
               const dataOne = dataArray[0] // 微型
               const dataTwo = dataArray[1] // 小型
               const dataArrayOne = dataOne.split(' ')
-              const dataArraytwo = dataTwo.split(' ')
+              const dataArrayTwo = dataTwo.split(' ')
 
               this.displacementOne = dataArrayOne[0] // 位移
               const pressureOneDA = dataArrayOne[1] // 压力5位数字量
 
-              this.displacementTwo = dataArraytwo[0] // 位移
-              const pressureTwoDA = dataArraytwo[1] // 压力5位数字量
+              this.displacementTwo = dataArrayTwo[0] // 位移
+              const pressureTwoDA = dataArrayTwo[1] // 压力5位数字量
 
               // 压力值，kg
               this.pressureOne = parseFloat(
