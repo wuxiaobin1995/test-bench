@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 11:15:35
- * @LastEditTime: 2023-04-20 17:27:49
+ * @LastEditTime: 2023-05-18 09:30:43
  * @Description : 根组件
 -->
 <template>
@@ -33,6 +33,15 @@ export default {
     /* 初始化减速比-小型 */
     if (!window.localStorage.getItem('reduction-small')) {
       window.localStorage.setItem('reduction-small', JSON.stringify(7))
+    }
+
+    /* 初始化左K的值 */
+    if (!window.localStorage.getItem('oneK')) {
+      window.localStorage.setItem('oneK', '83.879')
+    }
+    /* 初始化右K的值 */
+    if (!window.localStorage.getItem('twoK')) {
+      window.localStorage.setItem('twoK', '83.879')
     }
 
     this.initSerialPort()

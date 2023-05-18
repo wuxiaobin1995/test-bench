@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 10:42:11
- * @LastEditTime: 2023-05-16 21:08:20
+ * @LastEditTime: 2023-05-18 11:59:06
  * @Description : home
 -->
 <template>
@@ -16,14 +16,17 @@
             >关 闭</el-button
           >
           <el-button type="info" class="item" @click="handleRefresh"
-            >刷 新 页 面</el-button
+            >刷 新</el-button
           >
-          <el-button type="success" class="item" @click="handleToZero"
+          <el-button type="info" class="item" @click="handleToZero"
             >调 零</el-button
+          >
+          <el-button type="info" class="item" @click="handleToK"
+            >设 K</el-button
           >
         </div>
 
-        <el-divider></el-divider>
+        <el-divider>{{ oneStandard ? '' : '压力传感器仍未调零' }}</el-divider>
 
         <div class="content">
           <div class="item">
@@ -210,12 +213,12 @@ export default {
       oneStandard: 0,
       twoStandard: 0,
 
-      displacementOne: null, // 位移值，0.00~200.00mm
+      displacementOne: null, // 位移值，0.00~200.00mm（微型）
       displacementArrayOne: [],
       pressureOne: null, // 压力值，kg
       pressureArrayOne: [],
 
-      displacementTwo: null, // 位移值，0.00~200.00mm
+      displacementTwo: null, // 位移值，0.00~200.00mm（小型）
       displacementArrayTwo: [],
       pressureTwo: null, // 压力值，kg
       pressureArrayTwo: [],
@@ -252,6 +255,9 @@ export default {
     this.reductionSmall = JSON.parse(
       window.localStorage.getItem('reduction-small')
     )
+
+    this.oneK = parseFloat(window.localStorage.getItem('oneK'))
+    this.twoK = parseFloat(window.localStorage.getItem('twoK'))
   },
   mounted() {
     this.initChartOne()
@@ -330,7 +336,7 @@ export default {
             })
             /* 调用 this.usbPortReceive.open() 成功时触发（开启串口成功） */
             this.usbPortReceive.on('open', () => {
-              console.log('接收数据开启成功')
+              console.log('接收数据-开启成功')
             })
             /* 调用 this.usbPortReceive.open() 失败时触发（开启串口失败） */
             this.usbPortReceive.on('error', () => {
@@ -353,11 +359,11 @@ export default {
               new Readline({ delimiter: '\n' })
             )
             this.parserReceive.on('data', data => {
-              console.log(data)
+              // console.log(data)
 
               const dataArray = data.split(',')
-              const dataOne = dataArray[0]
-              const dataTwo = dataArray[1]
+              const dataOne = dataArray[0] // 微型
+              const dataTwo = dataArray[1] // 小型
               const dataArrayOne = dataOne.split(' ')
               const dataArraytwo = dataTwo.split(' ')
 
@@ -369,10 +375,10 @@ export default {
 
               // 压力值，kg
               this.pressureOne = parseFloat(
-                ((pressureOneDA - this.oneStandard) / -83.879).toFixed(1)
+                ((pressureOneDA - this.oneStandard) / -this.oneK).toFixed(1)
               )
               this.pressureTwo = parseFloat(
-                ((pressureTwoDA - this.twoStandard) / -83.879).toFixed(1)
+                ((pressureTwoDA - this.twoStandard) / -this.twoK).toFixed(1)
               )
 
               this.displacementArrayOne.push(this.displacementOne)
@@ -392,7 +398,7 @@ export default {
               }
               // 渲染图形
               this.optionOne.series[0].data = this.displacementArrayOne
-              this.optionOne.series[2].data = this.displacementArrayTwo
+              this.optionOne.series[1].data = this.displacementArrayTwo
 
               this.optionTwo.series[0].data = this.pressureArrayOne
               this.optionTwo.series[1].data = this.pressureArrayTwo
@@ -462,7 +468,7 @@ export default {
             })
             /* 调用 this.usbPortMiniature.open() 成功时触发（开启串口成功） */
             this.usbPortMiniature.on('open', () => {
-              console.log('微型电缸串口开启成功')
+              console.log('微型电缸-串口开启成功')
             })
             /* 调用 this.usbPortMiniature.open() 失败时触发（开启串口失败） */
             this.usbPortMiniature.on('error', () => {
@@ -485,8 +491,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserMiniature.on('data', data => {
-              console.log('微型电缸返回数据：\n')
-              console.log(data)
+              console.log('微型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -550,7 +555,7 @@ export default {
             })
             /* 调用 this.usbPortSmall.open() 成功时触发（开启串口成功） */
             this.usbPortSmall.on('open', () => {
-              console.log('小型电缸串口开启成功')
+              console.log('小型电缸-串口开启成功')
             })
             /* 调用 this.usbPortSmall.open() 失败时触发（开启串口失败） */
             this.usbPortSmall.on('error', () => {
@@ -573,8 +578,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserSmall.on('data', data => {
-              console.log('小型电缸返回数据：\n')
-              console.log(data)
+              console.log('小型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -610,7 +614,7 @@ export default {
     },
 
     /**
-     * @description: 初始化图形1
+     * @description: 初始化位移图形
      */
     initChartOne() {
       // 计算横坐标数组
@@ -657,7 +661,7 @@ export default {
     },
 
     /**
-     * @description: 初始化图形2
+     * @description: 初始化压力图形
      */
     initChartTwo() {
       // 计算横坐标数组
@@ -745,6 +749,15 @@ export default {
     },
 
     /**
+     * @description: 前往设置K页
+     */
+    handleToK() {
+      this.$router.push({
+        path: '/set-k'
+      })
+    },
+
+    /**
      * @description: 前往设置串口页
      */
     handleToCom() {
@@ -778,7 +791,7 @@ export default {
       this.$router.push({
         path: '/refresh',
         query: {
-          routerName: JSON.stringify('/home'),
+          routerName: JSON.stringify('/'),
           duration: JSON.stringify(300)
         }
       })

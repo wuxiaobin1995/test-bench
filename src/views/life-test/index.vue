@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-05-16 21:07:56
+ * @LastEditTime: 2023-05-18 11:51:43
  * @Description : 寿命测试
 -->
 <template>
@@ -45,7 +45,7 @@
 
       <div class="absolute">
         <div class="value">
-          <span>请输入绝对位移(圈)：</span>
+          <span>[推出]请输入绝对位移(圈)：</span>
           <el-input-number
             v-model="absoluteValueMiniature"
             :precision="0"
@@ -82,7 +82,7 @@
             class="btn-speed"
             :disabled="!isZeroMiniature || isMiniature"
             @click="handleSetSpeedMiniature"
-            >发送转速</el-button
+            >设定转速</el-button
           >
         </div>
       </div>
@@ -129,7 +129,7 @@
 
       <div class="absolute">
         <div class="value">
-          <span>请输入绝对位移(圈)：</span>
+          <span>[推出]请输入绝对位移(圈)：</span>
           <el-input-number
             v-model="absoluteValueSmall"
             :precision="0"
@@ -166,7 +166,7 @@
             class="btn-speed"
             :disabled="!isZeroSmall || isSmall"
             @click="handleSetSpeedSmall"
-            >发送转速</el-button
+            >设定转速</el-button
           >
         </div>
       </div>
@@ -231,8 +231,8 @@ export default {
       numSmall: 0,
 
       // 圈数
-      absoluteValueMiniature: 80,
-      absoluteValueSmall: 280
+      absoluteValueMiniature: 60,
+      absoluteValueSmall: 300
     }
   },
 
@@ -354,11 +354,11 @@ export default {
               new Readline({ delimiter: '\n' })
             )
             this.parserReceive.on('data', data => {
-              console.log(data)
+              // console.log(data)
 
               const dataArray = data.split(',')
-              const dataOne = dataArray[0]
-              const dataTwo = dataArray[1]
+              const dataOne = dataArray[0] // 微型
+              const dataTwo = dataArray[1] // 小型
               const dataArrayOne = dataOne.split(' ')
               const dataArraytwo = dataTwo.split(' ')
 
@@ -368,7 +368,7 @@ export default {
               /* 微型电缸往复运动 */
               // 判断是否归零
               if (
-                this.displacementMiniature <= 1 ||
+                this.displacementMiniature <= 100 ||
                 this.isMiniature === true
               ) {
                 this.isZeroMiniature = true
@@ -384,20 +384,20 @@ export default {
                   ).toFixed(2) // 设定的距离mm
 
                   /* 往复运动逻辑 */
-                  if (this.displacementMiniature <= 1) {
+                  if (this.displacementMiniature <= 100) {
                     // 归到0，让它推出
                     this.positionMiniature()
                   } else if (
                     Math.abs(
                       this.displacementMiniature - absoluteSetMiniature
-                    ) <= 1
+                    ) <= 5
                   ) {
                     // 走到设定位置，让它收回
                     this.zeroMiniature()
                   }
 
                   /* 计算往复次数 */
-                  if (this.displacementMiniature <= 1) {
+                  if (this.displacementMiniature <= 100) {
                     this.numMiniature = this.numMiniature + 1
                   }
                 }
@@ -405,7 +405,7 @@ export default {
 
               /* 小型电缸往复运动 */
               // 判断是否归零
-              if (this.displacementSmall <= 1 || this.isSmall === true) {
+              if (this.displacementSmall <= 100 || this.isSmall === true) {
                 this.isZeroSmall = true
               } else {
                 this.isZeroSmall = false
@@ -419,18 +419,18 @@ export default {
                   ).toFixed(2) // 设定的距离mm
 
                   /* 往复运动逻辑 */
-                  if (this.displacementSmall <= 1) {
+                  if (this.displacementSmall <= 100) {
                     // 归到0，让它推出
                     this.positionSmall()
                   } else if (
-                    Math.abs(this.displacementSmall - absoluteSetSmall) <= 1
+                    Math.abs(this.displacementSmall - absoluteSetSmall) <= 5
                   ) {
                     // 走到设定位置，让它收回
                     this.zeroSmall()
                   }
 
                   /* 计算往复次数 */
-                  if (this.displacementSmall <= 1) {
+                  if (this.displacementSmall <= 100) {
                     this.numSmall = this.numSmall + 1
                   }
                 }
@@ -521,8 +521,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserMiniature.on('data', data => {
-              console.log('微型电缸返回数据：\n')
-              console.log(data)
+              console.log('微型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -609,8 +608,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserSmall.on('data', data => {
-              console.log('小型电缸返回数据：\n')
-              console.log(data)
+              console.log('小型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -671,7 +669,7 @@ export default {
      * @description: 归0指令（微型）
      */
     zeroMiniature() {
-      order = [
+      const order = [
         '0x01',
         '0x10',
         '0x00',
@@ -778,7 +776,7 @@ export default {
      * @description: 归0指令（小型）
      */
     zeroSmall() {
-      order = [
+      const order = [
         '0x01',
         '0x10',
         '0x00',

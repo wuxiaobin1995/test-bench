@@ -28,6 +28,12 @@ const routes = [
     name: 'set-zero',
     component: () => import('@/views/set-zero')
   },
+  /* 设置压力传感器的K值 */
+  {
+    path: '/set-k',
+    name: 'set-k',
+    component: () => import('@/views/set-k')
+  },
   /* 设置COM口 */
   {
     path: '/set-com',
