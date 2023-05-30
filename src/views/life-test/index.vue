@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-05-18 16:42:25
+ * @LastEditTime: 2023-05-26 11:48:58
  * @Description : 寿命测试
 -->
 <template>
@@ -11,25 +11,25 @@
       <el-divider>微型电缸</el-divider>
 
       <div class="btn">
-        <el-button type="success" class="item" @click="handleZeroMiniature"
-          >归 零</el-button
-        >
         <el-button
           type="primary"
           class="item"
-          :disabled="!isZeroMiniature || isMiniature"
+          :disabled="isMiniature"
           @click="handleStartMiniature"
           >开 始</el-button
         >
         <el-button
           type="danger"
           class="item"
-          :disabled="!isZeroMiniature || !isMiniature"
+          :disabled="!isMiniature"
           @click="handleStopMiniature"
           >结 束</el-button
         >
         <el-button type="info" class="item" @click="handleBack"
           >返 回</el-button
+        >
+        <el-button type="info" class="item" @click="handleRecordMiniature"
+          >数据记录</el-button
         >
         <el-button type="info" class="item" @click="handleRefresh"
           >刷 新</el-button
@@ -41,23 +41,7 @@
       <div class="num">
         <div class="value">往返次数：{{ numMiniature }}</div>
         <div class="value">位移的值：{{ displacementMiniature }}</div>
-      </div>
-
-      <div class="absolute">
-        <div class="value">
-          <span>[推出]请输入绝对位移(圈)：</span>
-          <el-input-number
-            v-model="absoluteValueMiniature"
-            :precision="0"
-            :step="1"
-            :min="1"
-          ></el-input-number>
-          <span
-            >&nbsp;&nbsp;&nbsp;&nbsp;（{{
-              ((absoluteValueMiniature * leadMin) / reductionMin).toFixed(2)
-            }}mm）</span
-          >
-        </div>
+        <div class="value">位置标志位：{{ numIsMiniature }}</div>
       </div>
 
       <div class="set">
@@ -80,7 +64,7 @@
           <el-button
             type="success"
             class="btn-speed"
-            :disabled="!isZeroMiniature || isMiniature"
+            :disabled="isMiniature"
             @click="handleSetSpeedMiniature"
             >设定转速</el-button
           >
@@ -95,25 +79,25 @@
       <el-divider>小型电缸</el-divider>
 
       <div class="btn">
-        <el-button type="success" class="item" @click="handleZeroSmall"
-          >归 零</el-button
-        >
         <el-button
           type="primary"
           class="item"
-          :disabled="!isZeroSmall || isSmall"
+          :disabled="isSmall"
           @click="handleStartSmall"
           >开 始</el-button
         >
         <el-button
           type="danger"
           class="item"
-          :disabled="!isZeroSmall || !isSmall"
+          :disabled="!isSmall"
           @click="handleStopSmall"
           >结 束</el-button
         >
         <el-button type="info" class="item" @click="handleBack"
           >返 回</el-button
+        >
+        <el-button type="info" class="item" @click="handleRecordSmall"
+          >数据记录</el-button
         >
         <el-button type="info" class="item" @click="handleRefresh"
           >刷 新</el-button
@@ -125,23 +109,7 @@
       <div class="num">
         <div class="value">往返次数：{{ numSmall }}</div>
         <div class="value">位移的值：{{ displacementSmall }}</div>
-      </div>
-
-      <div class="absolute">
-        <div class="value">
-          <span>[推出]请输入绝对位移(圈)：</span>
-          <el-input-number
-            v-model="absoluteValueSmall"
-            :precision="0"
-            :step="1"
-            :min="1"
-          ></el-input-number>
-          <span
-            >&nbsp;&nbsp;&nbsp;&nbsp;（{{
-              ((absoluteValueSmall * leadSmall) / reductionSmall).toFixed(2)
-            }}mm）</span
-          >
-        </div>
+        <div class="value">位置标志位：{{ numIsSmall }}</div>
       </div>
 
       <div class="set">
@@ -164,7 +132,7 @@
           <el-button
             type="success"
             class="btn-speed"
-            :disabled="!isZeroSmall || isSmall"
+            :disabled="isSmall"
             @click="handleSetSpeedSmall"
             >设定转速</el-button
           >
@@ -202,15 +170,7 @@ export default {
       comSendMiniature: '',
       comSendSmall: '',
 
-      /* 导程、减速比 */
-      leadMin: '', // 导程（微型）
-      leadSmall: '', // 导程（小型）
-      reductionMin: '', // 减速比（微型）
-      reductionSmall: '', // 减速比（小型）
-
       /* 开关 */
-      isZeroMiniature: false, // 是否归零（微型）
-      isZeroSmall: false, // 是否归零（小型）
       isMiniature: false, // 是否开始测试（微型）
       isSmall: false, // 是否开始测试（小型）
 
@@ -230,9 +190,9 @@ export default {
       numMiniature: 0,
       numSmall: 0,
 
-      // 圈数
-      absoluteValueMiniature: 60,
-      absoluteValueSmall: 300
+      // 位置标志位
+      numIsMiniature: 0, // 越过180mm，0->1一次；低于50mm，0->2一次（微型）
+      numIsSmall: 0 // 越过180mm，0->1一次；低于50mm，0->2一次（小型）
     }
   },
 
@@ -240,20 +200,13 @@ export default {
     this.comReceive = window.localStorage.getItem('com-receive')
     this.comSendMiniature = window.localStorage.getItem('com-send-miniature')
     this.comSendSmall = window.localStorage.getItem('com-send-small')
-
-    this.leadMin = JSON.parse(window.localStorage.getItem('lead-min'))
-    this.leadSmall = JSON.parse(window.localStorage.getItem('lead-small'))
-    this.reductionMin = JSON.parse(window.localStorage.getItem('reduction-min'))
-    this.reductionSmall = JSON.parse(
-      window.localStorage.getItem('reduction-small')
-    )
   },
   mounted() {
     setTimeout(() => {
       if (this.comReceive && this.comSendMiniature && this.comSendSmall) {
-        this.initSerialPortReceive()
-        this.initSerialPortSendMiniature()
-        this.initSerialPortSendSmall()
+        // this.initSerialPortReceive()
+        // this.initSerialPortSendMiniature()
+        // this.initSerialPortSendSmall()
       } else {
         this.$alert(
           `请重新连接USB线，然后点击"刷新页面"按钮！`,
@@ -357,9 +310,11 @@ export default {
               // console.log(data)
 
               const dataArray = data.split(',')
+
               const dataOne = dataArray[0] // 微型
               const dataTwo = dataArray[1] // 小型
-              const dataThree = dataArray[2] // 越过某个距离，0->1一次
+              const dataThree = dataArray[2]
+
               const dataArrayOne = dataOne.split(' ')
               const dataArrayTwo = dataTwo.split(' ')
               const dataArrayThree = dataThree.split(' ')
@@ -367,80 +322,37 @@ export default {
               this.displacementMiniature = parseFloat(dataArrayOne[0]) // 位移（微型）
               this.displacementSmall = parseFloat(dataArrayTwo[0]) // 位移（小型）
 
-              const numIsMiniature = parseFloat(dataArrayThree[0])
-              const numIsSmall = parseFloat(dataArrayThree[1])
-              console.log('微型：', numIsMiniature, ' 小型：', numIsSmall)
+              this.numIsMiniature = parseFloat(dataArrayThree[0]) // 越过180mm，0->1一次；低于50mm，0->2一次
+              this.numIsSmall = parseFloat(dataArrayThree[1]) // 越过180mm，0->1一次；低于50mm，0->2一次
+              // console.log('微型：', this.numIsMiniature, ' 小型：', this.numIsSmall)
 
               /* 微型电缸往复运动 */
-              // 判断是否归零
-              if (
-                this.displacementMiniature <= 100 ||
-                this.isMiniature === true
-              ) {
-                this.isZeroMiniature = true
-              } else {
-                this.isZeroMiniature = false
-              }
-
-              if (this.isZeroMiniature === true) {
-                if (this.isMiniature === true) {
-                  let absoluteSetMiniature = (
-                    (this.absoluteValueMiniature * this.leadMin) /
-                    this.reductionMin
-                  ).toFixed(2) // 设定的距离mm
-
-                  /* 往复运动逻辑 */
-                  if (this.displacementMiniature <= 100) {
-                    // 归到0，让它推出
-                    this.positionMiniature()
-                  } else if (
-                    Math.abs(
-                      this.displacementMiniature - absoluteSetMiniature
-                    ) <= 5 &&
-                    numIsMiniature === 1
-                  ) {
-                    // 走到设定位置，让它收回
-                    this.zeroMiniature()
-                  }
-
-                  /* 计算往复次数 */
-                  if (numIsMiniature === 1) {
-                    this.numMiniature = this.numMiniature + 1
-                  }
+              if (this.isMiniature === true) {
+                if (this.numIsMiniature === 2) {
+                  // 让它推出
+                  this.positionMiniature()
+                } else if (this.numIsMiniature === 1) {
+                  // 让它收回
+                  this.zeroMiniature()
+                }
+                /* 计算往复次数 */
+                if (this.numIsMiniature === 1) {
+                  this.numMiniature += 1
                 }
               }
 
               /* 小型电缸往复运动 */
-              // 判断是否归零
-              if (this.displacementSmall <= 100 || this.isSmall === true) {
-                this.isZeroSmall = true
-              } else {
-                this.isZeroSmall = false
-              }
-
-              if (this.isZeroSmall === true) {
-                if (this.isSmall === true) {
-                  let absoluteSetSmall = (
-                    (this.absoluteValueSmall * this.leadMin) /
-                    this.reductionMin
-                  ).toFixed(2) // 设定的距离mm
-
-                  /* 往复运动逻辑 */
-                  if (this.displacementSmall <= 100) {
-                    // 归到0，让它推出
-                    this.positionSmall()
-                  } else if (
-                    Math.abs(this.displacementSmall - absoluteSetSmall) <= 5 &&
-                    numIsSmall === 1
-                  ) {
-                    // 走到设定位置，让它收回
-                    this.zeroSmall()
-                  }
-
-                  /* 计算往复次数 */
-                  if (numIsSmall === 1) {
-                    this.numSmall = this.numSmall + 1
-                  }
+              if (this.isSmall === true) {
+                if (this.numIsSmall === 2) {
+                  // 让它推出
+                  this.positionSmall()
+                } else if (this.numIsSmall === 1) {
+                  // 让它收回
+                  this.zeroSmall()
+                }
+                /* 计算往复次数 */
+                if (this.numIsSmall === 1) {
+                  this.numSmall += 1
                 }
               }
             })
@@ -529,7 +441,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserMiniature.on('data', data => {
-              console.log('微型电缸返回数据：', data)
+              // console.log('微型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -616,7 +528,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserSmall.on('data', data => {
-              console.log('小型电缸返回数据：', data)
+              // console.log('小型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -652,18 +564,11 @@ export default {
     },
 
     /**
-     * @description: 归零（微型）
-     */
-    handleZeroMiniature() {
-      this.zeroMiniature()
-    },
-
-    /**
      * @description: 开始（微型）
      */
     handleStartMiniature() {
+      this.zeroMiniature()
       this.isMiniature = true
-      this.numMiniature = 0
     },
 
     /**
@@ -697,7 +602,7 @@ export default {
      * @description: 运动至指定位置（微型）
      */
     positionMiniature() {
-      const absoluteValueMiniature = this.absoluteValueMiniature
+      const absoluteValueMiniature = 120
 
       let baseOrder = []
       let otherOrder = []
@@ -725,10 +630,11 @@ export default {
       if (this.radioMiniature === '开启') {
         let baseOrder = []
         let otherOrder = []
+        let res16 = '00000000'
 
         baseOrder = ['0x01', '0x10', '0x00', '0xee', '0x00', '0x02', '0x04']
-        if (speedMiniature > 0) {
-          res16 = (speedMiniature * 1000).toString(16)
+        if (this.speedMiniature > 0) {
+          res16 = (this.speedMiniature * 1000).toString(16)
           if (res16.length === 1) {
             res16 = '0000000' + res16
           } else if (res16.length === 2) {
@@ -759,18 +665,11 @@ export default {
     },
 
     /**
-     * @description: 归零（小型）
-     */
-    handleZeroSmall() {
-      this.zeroSmall()
-    },
-
-    /**
      * @description: 开始（小型）
      */
     handleStartSmall() {
+      this.zeroSmall()
       this.isSmall = true
-      this.numSmall = 0
     },
 
     /**
@@ -804,7 +703,7 @@ export default {
      * @description: 运动至指定位置（小型）
      */
     positionSmall() {
-      const absoluteValueSmall = this.absoluteValueSmall
+      const absoluteValueSmall = 300
 
       let baseOrder = []
       let otherOrder = []
@@ -830,10 +729,11 @@ export default {
       if (this.radioSmall === '开启') {
         let baseOrder = []
         let otherOrder = []
+        let res16 = '00000000'
 
         baseOrder = ['0x01', '0x10', '0x00', '0xee', '0x00', '0x02', '0x04']
-        if (speedSmall > 0) {
-          res16 = (speedSmall * 1000).toString(16)
+        if (this.speedSmall > 0) {
+          res16 = (this.speedSmall * 1000).toString(16)
           if (res16.length === 1) {
             res16 = '0000000' + res16
           } else if (res16.length === 2) {
@@ -861,6 +761,38 @@ export default {
 
         this.usbPortSmall.write(order)
       }
+    },
+
+    /**
+     * @description: 数据记录（微型）
+     */
+    handleRecordMiniature() {
+      // const electric = '微型电缸'
+      // this.$router.push({
+      //   path: '/',
+      //   query: {
+      //     electric: JSON.stringify(electric),
+      //     startTime: JSON.stringify(this.startTime),
+      //     endTime: JSON.stringify(this.endTime),
+      //     routerName: JSON.stringify('/life-test')
+      //   }
+      // })
+    },
+
+    /**
+     * @description: 数据记录（小型）
+     */
+    handleRecordSmall() {
+      // const electric = '小型电缸'
+      // this.$router.push({
+      //   path: '/',
+      //   query: {
+      //     electric: JSON.stringify(electric),
+      //     startTime: JSON.stringify(this.startTime),
+      //     endTime: JSON.stringify(this.endTime),
+      //     routerName: JSON.stringify('/life-test')
+      //   }
+      // })
     },
 
     /**
@@ -897,7 +829,7 @@ export default {
     }
 
     .num {
-      margin-top: 20px;
+      margin-top: 50px;
       @include flex(column, center, center);
       .value {
         border: 2px solid black;
@@ -905,17 +837,7 @@ export default {
         padding: 5px 30px;
         font-size: 26px;
         font-weight: 700;
-        margin-bottom: 5px;
-      }
-    }
-
-    .absolute {
-      margin-top: 30px;
-      @include flex(row, center, center);
-      .value {
-        border: 2px solid black;
-        border-radius: 10px;
-        padding: 20px;
+        margin-bottom: 15px;
       }
     }
 
@@ -951,7 +873,7 @@ export default {
     }
 
     .num {
-      margin-top: 20px;
+      margin-top: 50px;
       @include flex(column, center, center);
       .value {
         border: 2px solid black;
@@ -959,17 +881,7 @@ export default {
         padding: 5px 30px;
         font-size: 26px;
         font-weight: 700;
-        margin-bottom: 5px;
-      }
-    }
-
-    .absolute {
-      margin-top: 30px;
-      @include flex(row, center, center);
-      .value {
-        border: 2px solid black;
-        border-radius: 10px;
-        padding: 20px;
+        margin-bottom: 15px;
       }
     }
 

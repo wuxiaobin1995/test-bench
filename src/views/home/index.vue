@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 10:42:11
- * @LastEditTime: 2023-05-18 15:32:02
+ * @LastEditTime: 2023-05-25 14:35:23
  * @Description : home
 -->
 <template>
@@ -265,9 +265,9 @@ export default {
 
     setTimeout(() => {
       if (this.comReceive && this.comSendMiniature && this.comSendSmall) {
-        this.initSerialPortReceive()
-        this.initSerialPortSendMiniature()
-        this.initSerialPortSendSmall()
+        // this.initSerialPortReceive()
+        // this.initSerialPortSendMiniature()
+        // this.initSerialPortSendSmall()
       } else {
         this.$alert(
           `请重新连接USB线，然后点击"刷新页面"按钮！`,
