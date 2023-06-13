@@ -1,38 +1,42 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-05-26 11:48:58
+ * @LastEditTime: 2023-06-13 17:57:50
  * @Description : 寿命测试
 -->
 <template>
-  <div class="life-test">
+  <div class="life-test" v-loading.fullscreen.lock="fullscreenLoading">
     <!-- 微型电缸 -->
     <div class="miniature">
       <el-divider>微型电缸</el-divider>
 
       <div class="btn">
         <el-button
-          type="primary"
           class="item"
-          :disabled="isMiniature"
+          type="primary"
+          :disabled="isMiniatureStart"
           @click="handleStartMiniature"
           >开 始</el-button
         >
         <el-button
-          type="danger"
           class="item"
-          :disabled="!isMiniature"
+          type="danger"
+          :disabled="!isMiniatureStart || isMiniatureStop"
           @click="handleStopMiniature"
-          >结 束</el-button
+          >暂 停</el-button
         >
-        <el-button type="info" class="item" @click="handleBack"
+        <el-button
+          class="item"
+          type="success"
+          :disabled="!isMiniatureStart || !isMiniatureStop"
+          @click="handleRestoreMiniature"
+          >继 续</el-button
+        >
+        <el-button class="item" type="info" @click="handleRecordMiniature"
+          >数据报表</el-button
+        >
+        <el-button class="item" type="info" @click="handleBack"
           >返 回</el-button
-        >
-        <el-button type="info" class="item" @click="handleRecordMiniature"
-          >数据记录</el-button
-        >
-        <el-button type="info" class="item" @click="handleRefresh"
-          >刷 新</el-button
         >
       </div>
 
@@ -40,35 +44,8 @@
 
       <div class="num">
         <div class="value">往返次数：{{ numMiniature }}</div>
-        <div class="value">位移的值：{{ displacementMiniature }}</div>
-        <div class="value">位置标志位：{{ numIsMiniature }}</div>
-      </div>
-
-      <div class="set">
-        <!-- 转速 -->
-        <div class="speed">
-          <el-radio-group v-model="radioMiniature">
-            <el-radio label="开启">开启</el-radio>
-            <el-radio label="关闭">关闭</el-radio>
-          </el-radio-group>
-          <div class="value">
-            <span>请输入转速的值(转/分钟)：</span>
-            <el-input-number
-              v-model="speedMiniature"
-              :precision="0"
-              :step="1"
-              :min="1"
-              :max="1000000"
-            ></el-input-number>
-          </div>
-          <el-button
-            type="success"
-            class="btn-speed"
-            :disabled="isMiniature"
-            @click="handleSetSpeedMiniature"
-            >设定转速</el-button
-          >
-        </div>
+        <div class="value">位移的值mm：{{ displacementMiniature }}</div>
+        <div class="value">压力值kg：{{ pressureMiniature }}</div>
       </div>
     </div>
 
@@ -80,27 +57,31 @@
 
       <div class="btn">
         <el-button
-          type="primary"
           class="item"
-          :disabled="isSmall"
+          type="primary"
+          :disabled="isSmallStart"
           @click="handleStartSmall"
           >开 始</el-button
         >
         <el-button
-          type="danger"
           class="item"
-          :disabled="!isSmall"
+          type="danger"
+          :disabled="!isSmallStart || isSmallStop"
           @click="handleStopSmall"
-          >结 束</el-button
+          >暂 停</el-button
         >
-        <el-button type="info" class="item" @click="handleBack"
+        <el-button
+          class="item"
+          type="success"
+          :disabled="!isSmallStart || !isSmallStop"
+          @click="handleRestoreSmall"
+          >继 续</el-button
+        >
+        <el-button class="item" type="info" @click="handleRecordSmall"
+          >数据报表</el-button
+        >
+        <el-button class="item" type="info" @click="handleBack"
           >返 回</el-button
-        >
-        <el-button type="info" class="item" @click="handleRecordSmall"
-          >数据记录</el-button
-        >
-        <el-button type="info" class="item" @click="handleRefresh"
-          >刷 新</el-button
         >
       </div>
 
@@ -108,35 +89,8 @@
 
       <div class="num">
         <div class="value">往返次数：{{ numSmall }}</div>
-        <div class="value">位移的值：{{ displacementSmall }}</div>
-        <div class="value">位置标志位：{{ numIsSmall }}</div>
-      </div>
-
-      <div class="set">
-        <!-- 转速 -->
-        <div class="speed">
-          <el-radio-group v-model="radioSmall">
-            <el-radio label="开启">开启</el-radio>
-            <el-radio label="关闭">关闭</el-radio>
-          </el-radio-group>
-          <div class="value">
-            <span>请输入转速的值(转/分钟)：</span>
-            <el-input-number
-              v-model="speedSmall"
-              :precision="0"
-              :step="1"
-              :min="1"
-              :max="1000000"
-            ></el-input-number>
-          </div>
-          <el-button
-            type="success"
-            class="btn-speed"
-            :disabled="isSmall"
-            @click="handleSetSpeedSmall"
-            >设定转速</el-button
-          >
-        </div>
+        <div class="value">位移的值mm：{{ displacementSmall }}</div>
+        <div class="value">压力值kg：{{ pressureSmall }}</div>
       </div>
     </div>
   </div>
@@ -148,51 +102,58 @@ import SerialPort from 'serialport'
 import ByteLength from '@serialport/parser-byte-length'
 import Readline from '@serialport/parser-readline'
 
+/* 数据库 */
+import { initDB } from '@/db/index.js'
+
 export default {
   name: 'life-test',
 
   data() {
     return {
+      fullscreenLoading: false, // 全屏加载动效
+
       /* 串口相关变量 */
+      // 数据接收
       usbPortReceive: null,
       parserReceive: null,
       scmBaudRateReceive: 115200,
-
+      // 微型
       usbPortMiniature: null,
       parserMiniature: null,
-      scmBaudRateMiniature: 115200,
-
+      scmBaudRateMiniature: 57600,
+      // 小型
       usbPortSmall: null,
       parserSmall: null,
-      scmBaudRateSmall: 115200,
-
+      scmBaudRateSmall: 57600,
+      // 3个COM口
       comReceive: '',
       comSendMiniature: '',
       comSendSmall: '',
 
       /* 开关 */
-      isMiniature: false, // 是否开始测试（微型）
-      isSmall: false, // 是否开始测试（小型）
+      isMiniatureStart: false, // 是否开始（微型）
+      isMiniatureStop: false, // 是否暂停（微型）
+      isSmallStart: false, // 是否开始（小型）
+      isSmallStop: false, // 是否暂停（小型）
 
-      // 位移值
+      /* 往返次数 */
+      numMiniature: 0, // 微型
+      numSmall: 0, // 小型
+      /* 位移值 */
       displacementMiniature: 0, // 微型，0.00~200.00mm
       displacementSmall: 0, // 小型，0.00~200.00mm
+      /* 压力值 */
+      pressureMiniature: 0, // 微型
+      pressureSmall: 0, // 小型
+      /* 时间 */
+      startTimeMiniature: '', // 开始-微型
+      endTimeMiniature: '', // 结束-微型
+      startTimeSmall: '', // 开始-小型
+      endTimeSmall: '', // 结束-小型
 
-      // 转速值（转/分钟）
-      speedMiniature: 5000, // 默认5000
-      speedSmall: 5000, // 默认5000
-
-      // 转速是否开启
-      radioMiniature: '关闭',
-      radioSmall: '关闭',
-
-      // 往返次数
-      numMiniature: 0,
-      numSmall: 0,
-
-      // 位置标志位
-      numIsMiniature: 0, // 越过180mm，0->1一次；低于50mm，0->2一次（微型）
-      numIsSmall: 0 // 越过180mm，0->1一次；低于50mm，0->2一次（小型）
+      /* 其他 */
+      numMiniatureTip: false, // 标记位
+      smallTip: false // 标记位
     }
   },
 
@@ -200,27 +161,25 @@ export default {
     this.comReceive = window.localStorage.getItem('com-receive')
     this.comSendMiniature = window.localStorage.getItem('com-send-miniature')
     this.comSendSmall = window.localStorage.getItem('com-send-small')
+
+    this.oneStandard = this.$store.state.zeroStandard.oneStandard
+    this.twoStandard = this.$store.state.zeroStandard.twoStandard
+
+    this.oneK = parseFloat(window.localStorage.getItem('oneK'))
+    this.twoK = parseFloat(window.localStorage.getItem('twoK'))
   },
   mounted() {
+    this.fullscreenLoading = true
     setTimeout(() => {
-      if (this.comReceive && this.comSendMiniature && this.comSendSmall) {
-        // this.initSerialPortReceive()
-        // this.initSerialPortSendMiniature()
-        // this.initSerialPortSendSmall()
-      } else {
-        this.$alert(
-          `请重新连接USB线，然后点击"刷新页面"按钮！`,
-          `初始化COM口列表失败`,
-          {
-            type: 'error',
-            showClose: false,
-            center: true,
-            confirmButtonText: '刷新页面',
-            callback: () => {
-              this.handleRefresh()
-            }
-          }
-        )
+      this.fullscreenLoading = false
+      // if (this.comReceive) {
+      //   this.initSerialPortReceive()
+      // }
+      // if (this.comSendMiniature) {
+      //   this.initSerialPortSendMiniature()
+      // }
+      if (this.comSendSmall) {
+        this.initSerialPortSendSmall()
       }
     }, 1000)
   },
@@ -313,47 +272,49 @@ export default {
 
               const dataOne = dataArray[0] // 微型
               const dataTwo = dataArray[1] // 小型
-              const dataThree = dataArray[2]
 
               const dataArrayOne = dataOne.split(' ')
               const dataArrayTwo = dataTwo.split(' ')
-              const dataArrayThree = dataThree.split(' ')
 
               this.displacementMiniature = parseFloat(dataArrayOne[0]) // 位移（微型）
               this.displacementSmall = parseFloat(dataArrayTwo[0]) // 位移（小型）
 
-              this.numIsMiniature = parseFloat(dataArrayThree[0]) // 越过180mm，0->1一次；低于50mm，0->2一次
-              this.numIsSmall = parseFloat(dataArrayThree[1]) // 越过180mm，0->1一次；低于50mm，0->2一次
-              // console.log('微型：', this.numIsMiniature, ' 小型：', this.numIsSmall)
+              const pressureMiniatureDA = dataArrayOne[1] // 压力5位数字量（微型）
+              const pressureSmallDA = dataArrayTwo[1] // 压力5位数字量（小型）
+              this.pressureMiniature = Math.abs(
+                parseFloat(
+                  (
+                    (pressureMiniatureDA - this.oneStandard) /
+                    -this.oneK
+                  ).toFixed(1)
+                )
+              )
+              this.pressureSmall = Math.abs(
+                parseFloat(
+                  ((pressureSmallDA - this.twoStandard) / -this.twoK).toFixed(1)
+                )
+              )
 
-              /* 微型电缸往复运动 */
-              if (this.isMiniature === true) {
-                if (this.numIsMiniature === 2) {
-                  // 让它推出
-                  this.positionMiniature()
-                } else if (this.numIsMiniature === 1) {
-                  // 让它收回
-                  this.zeroMiniature()
+              /* 微型 */
+              if (this.displacementMiniature >= 145) {
+                if (this.numMiniatureTip === true) {
+                  this.numMiniature += 1 // 计数+1
                 }
-                /* 计算往复次数 */
-                if (this.numIsMiniature === 1) {
-                  this.numMiniature += 1
-                }
+                this.numMiniatureTip = false
+              }
+              if (this.displacementMiniature <= 55) {
+                this.numMiniatureTip = true
               }
 
-              /* 小型电缸往复运动 */
-              if (this.isSmall === true) {
-                if (this.numIsSmall === 2) {
-                  // 让它推出
-                  this.positionSmall()
-                } else if (this.numIsSmall === 1) {
-                  // 让它收回
-                  this.zeroSmall()
+              /* 小型 */
+              if (this.displacementSmall >= 145) {
+                if (this.smallTip === true) {
+                  this.numSmall += 1 // 计数+1
                 }
-                /* 计算往复次数 */
-                if (this.numIsSmall === 1) {
-                  this.numSmall += 1
-                }
+                this.smallTip = false
+              }
+              if (this.displacementSmall <= 55) {
+                this.smallTip = true
               }
             })
           } else {
@@ -441,7 +402,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserMiniature.on('data', data => {
-              // console.log('微型电缸返回数据：', data)
+              console.log('微型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -528,7 +489,7 @@ export default {
               new ByteLength({ length: 8 })
             )
             this.parserSmall.on('data', data => {
-              // console.log('小型电缸返回数据：', data)
+              console.log('小型电缸返回数据：', data)
             })
           } else {
             this.$alert(
@@ -563,205 +524,308 @@ export default {
         })
     },
 
+    /* -------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
+
     /**
      * @description: 开始（微型）
      */
     handleStartMiniature() {
-      this.zeroMiniature()
-      this.isMiniature = true
+      this.isMiniatureStart = true
+
+      this.fullscreenLoading = true
+      // 主机发送数据 - 模式给定
+      console.log('主机发送数据 - 模式给定')
+      this.usbPortMiniature.write([
+        0x01, 0x06, 0x60, 0x60, 0x00, 0x10, 0x96, 0x18
+      ])
+      setTimeout(() => {
+        // 主机发送数据 - 每圈脉冲数（500）
+        console.log('主机发送数据 - 每圈脉冲数（500）')
+        this.usbPortMiniature.write([
+          0x01, 0x06, 0x20, 0x33, 0x01, 0xf4, 0x72, 0x12
+        ])
+        setTimeout(() => {
+          // 主机发送数据 - 第一段位置给定（先给负数）
+          console.log('主机发送数据 - 第一段位置给定（先给负数）')
+          this.usbPortMiniature.write([
+            0x01, 0x06, 0x20, 0x40, 0xd8, 0xf0, 0xd9, 0x9a
+          ])
+          setTimeout(() => {
+            // 主机发送数据 - 第二段位置给定（再给正数）
+            console.log('主机发送数据 - 第二段位置给定（再给正数）')
+            this.usbPortMiniature.write([
+              0x01, 0x06, 0x20, 0x41, 0x27, 0x10, 0xc8, 0x22
+            ])
+            setTimeout(() => {
+              // 主机发送数据 - 第一段速度给定
+              console.log('主机发送数据 - 第一段速度给定')
+              this.usbPortMiniature.write([
+                0x01, 0x06, 0x20, 0x44, 0x01, 0xf4, 0xc2, 0x08
+              ])
+              setTimeout(() => {
+                // 主机发送数据 - 第二段速度给定
+                console.log('主机发送数据 - 第二段速度给定')
+                this.usbPortMiniature.write([
+                  0x01, 0x06, 0x20, 0x45, 0x01, 0xf4, 0x93, 0xc8
+                ])
+                setTimeout(() => {
+                  // 主机发送数据 - 系统密码
+                  console.log('主机发送数据 - 系统密码')
+                  this.usbPortMiniature.write([
+                    0x01, 0x06, 0x20, 0x20, 0x00, 0x7b, 0xc3, 0xe3
+                  ])
+                  setTimeout(() => {
+                    // 主机发送数据 - 关机保存
+                    console.log('主机发送数据 - 关机保存')
+                    this.usbPortMiniature.write([
+                      0x01, 0x06, 0x20, 0x21, 0x00, 0x01, 0x13, 0xc0
+                    ])
+                    setTimeout(() => {
+                      // 主机发送数据 - 重新启动
+                      console.log('主机发送数据 - 重新启动')
+                      this.usbPortMiniature.write([
+                        0x01, 0x06, 0x20, 0x24, 0x00, 0x01, 0x03, 0xc1
+                      ])
+                      setTimeout(() => {
+                        // 主机发送数据 - 控制给定
+                        console.log('机发送数据 - 控制给定')
+                        this.usbPortMiniature.write([
+                          0x01, 0x06, 0x60, 0x40, 0x00, 0x00, 0x96, 0x1e
+                        ])
+                        setTimeout(() => {
+                          // 主机发送数据 - 控制给定
+                          console.log('主机发送数据 - 控制给定')
+                          this.usbPortMiniature.write([
+                            0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+                          ])
+                          this.fullscreenLoading = false
+                          this.startTimeMiniature = this.$moment().format(
+                            'YYYY-MM-DD HH:mm:ss'
+                          )
+                        }, 1000)
+                      }, 1000)
+                    }, 3000)
+                  }, 1000)
+                }, 1000)
+              }, 1000)
+            }, 1000)
+          }, 1000)
+        }, 1000)
+      }, 1000)
     },
 
     /**
-     * @description: 结束（微型）
+     * @description: 暂停（微型）
      */
     handleStopMiniature() {
-      this.isMiniature = false
-    },
+      this.isMiniatureStop = true
 
-    /**
-     * @description: 归0指令（微型）
-     */
-    zeroMiniature() {
-      const order = [
-        '0x01',
-        '0x10',
-        '0x00',
-        '0xf2',
-        '0x00',
-        '0x02',
-        '0x04',
-        '0x00',
-        '0x00',
-        '0x00',
-        '0x00'
-      ]
-      this.usbPortMiniature.write(order)
-    },
+      this.fullscreenLoading = true
+      // 急停
+      console.log('主机发送数据 - 控制给定（急停）')
+      this.usbPortMiniature.write([
+        0x01, 0x06, 0x60, 0x40, 0x00, 0x10, 0x97, 0xd2
+      ])
+      this.fullscreenLoading = false
 
-    /**
-     * @description: 运动至指定位置（微型）
-     */
-    positionMiniature() {
-      const absoluteValueMiniature = 120
+      this.endTimeMiniature = this.$moment().format('YYYY-MM-DD HH:mm:ss')
 
-      let baseOrder = []
-      let otherOrder = []
-
-      baseOrder = ['0x01', '0x10', '0x00', '0xf2', '0x00', '0x02', '0x04']
-      let res16 = (
-        Math.pow(2, 32) + -(absoluteValueMiniature * 32768)
-      ).toString(16)
-
-      const one = '0x' + res16.substring(0, 2)
-      const two = '0x' + res16.substring(2, 4)
-      const three = '0x' + res16.substring(4, 6)
-      const four = '0x' + res16.substring(6, 8)
-      otherOrder = [one, two, three, four]
-
-      const order = baseOrder.concat(otherOrder)
-
-      this.usbPortMiniature.write(order)
-    },
-
-    /**
-     * @description: 设置转速（微型）
-     */
-    handleSetSpeedMiniature() {
-      if (this.radioMiniature === '开启') {
-        let baseOrder = []
-        let otherOrder = []
-        let res16 = '00000000'
-
-        baseOrder = ['0x01', '0x10', '0x00', '0xee', '0x00', '0x02', '0x04']
-        if (this.speedMiniature > 0) {
-          res16 = (this.speedMiniature * 1000).toString(16)
-          if (res16.length === 1) {
-            res16 = '0000000' + res16
-          } else if (res16.length === 2) {
-            res16 = '000000' + res16
-          } else if (res16.length === 3) {
-            res16 = '00000' + res16
-          } else if (res16.length === 4) {
-            res16 = '0000' + res16
-          } else if (res16.length === 5) {
-            res16 = '000' + res16
-          } else if (res16.length === 6) {
-            res16 = '00' + res16
-          } else if (res16.length === 7) {
-            res16 = '0' + res16
-          }
-        }
-
-        const one = '0x' + res16.substring(0, 2)
-        const two = '0x' + res16.substring(2, 4)
-        const three = '0x' + res16.substring(4, 6)
-        const four = '0x' + res16.substring(6, 8)
-        otherOrder = [one, two, three, four]
-
-        const order = baseOrder.concat(otherOrder)
-
-        this.usbPortMiniature.write(order)
+      if (this.numMiniature > 100) {
+        this.saveMiniature()
+      } else {
+        this.$message({
+          message: '警告：微型电缸往的复次数少于100次，不给予保存！',
+          type: 'warning',
+          duration: 5000
+        })
       }
     },
+
+    /**
+     * @description: 保存数据（微型）
+     */
+    saveMiniature() {
+      const startTimeMiniature = this.startTimeMiniature
+      const endTimeMiniature = this.endTimeMiniature
+      const numMiniature = this.numMiniature
+
+      // 保存数据到数据库
+      const db = initDB()
+      db.life_data
+        .add({
+          electric: '微型电缸',
+          startTimeMiniature: startTimeMiniature, // 开始时间
+          endTimeMiniature: endTimeMiniature, // 结束时间
+          numMiniature: numMiniature // 往复次数
+        })
+        .then(() => {
+          this.$message({
+            message: '数据保存成功',
+            type: 'success',
+            duration: 5000
+          })
+        })
+        .then(() => {})
+        .catch(() => {
+          this.$confirm(`请点击"重新保存"按钮！`, '微型-数据保存失败', {
+            type: 'error',
+            showClose: false,
+            closeOnClickModal: false,
+            closeOnPressEscape: false,
+            center: true,
+            confirmButtonText: '重新保存',
+            cancelButtonText: '刷新页面'
+          })
+            .then(() => {
+              this.saveMiniature()
+            })
+            .catch(() => {
+              this.handleRefresh()
+            })
+        })
+        .finally(() => {})
+    },
+
+    /**
+     * @description: 继续（微型）
+     */
+    handleRestoreMiniature() {
+      this.isMiniatureStop = false
+
+      this.fullscreenLoading = true
+      // 恢复
+      console.log('主机发送数据 - 控制给定（恢复）')
+      this.usbPortMiniature.write([
+        0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+      ])
+      this.fullscreenLoading = false
+
+      this.startTimeMiniature = this.$moment().format('YYYY-MM-DD HH:mm:ss')
+    },
+
+    /* -------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
 
     /**
      * @description: 开始（小型）
      */
     handleStartSmall() {
-      this.zeroSmall()
-      this.isSmall = true
+      this.isSmallStart = true
+
+      this.fullscreenLoading = true
+      // 主机发送数据 - 模式给定
+      console.log('主机发送数据 - 模式给定')
+      this.usbPortSmall.write([0x01, 0x06, 0x60, 0x60, 0x00, 0x10, 0x96, 0x18])
+      setTimeout(() => {
+        // 主机发送数据 - 每圈脉冲数（500）
+        console.log('主机发送数据 - 每圈脉冲数（500）')
+        this.usbPortSmall.write([
+          0x01, 0x06, 0x20, 0x33, 0x01, 0xf4, 0x72, 0x12
+        ])
+        setTimeout(() => {
+          // 主机发送数据 - 第一段位置给定（先给负数）
+          console.log('主机发送数据 - 第一段位置给定（先给负数）')
+          this.usbPortSmall.write([
+            0x01, 0x06, 0x20, 0x40, 0xd8, 0xf0, 0xd9, 0x9a
+          ])
+          setTimeout(() => {
+            // 主机发送数据 - 第二段位置给定（再给正数）
+            console.log('主机发送数据 - 第二段位置给定（再给正数）')
+            this.usbPortSmall.write([
+              0x01, 0x06, 0x20, 0x41, 0x27, 0x10, 0xc8, 0x22
+            ])
+            setTimeout(() => {
+              // 主机发送数据 - 第一段速度给定
+              console.log('主机发送数据 - 第一段速度给定')
+              this.usbPortSmall.write([
+                0x01, 0x06, 0x20, 0x44, 0x01, 0xf4, 0xc2, 0x08
+              ])
+              setTimeout(() => {
+                // 主机发送数据 - 第二段速度给定
+                console.log('主机发送数据 - 第二段速度给定')
+                this.usbPortSmall.write([
+                  0x01, 0x06, 0x20, 0x45, 0x01, 0xf4, 0x93, 0xc8
+                ])
+                setTimeout(() => {
+                  // 主机发送数据 - 系统密码
+                  console.log('主机发送数据 - 系统密码')
+                  this.usbPortSmall.write([
+                    0x01, 0x06, 0x20, 0x20, 0x00, 0x7b, 0xc3, 0xe3
+                  ])
+                  setTimeout(() => {
+                    // 主机发送数据 - 关机保存
+                    console.log('主机发送数据 - 关机保存')
+                    this.usbPortSmall.write([
+                      0x01, 0x06, 0x20, 0x21, 0x00, 0x01, 0x13, 0xc0
+                    ])
+                    setTimeout(() => {
+                      // 主机发送数据 - 重新启动
+                      console.log('主机发送数据 - 重新启动')
+                      this.usbPortSmall.write([
+                        0x01, 0x06, 0x20, 0x24, 0x00, 0x01, 0x03, 0xc1
+                      ])
+                      setTimeout(() => {
+                        // 主机发送数据 - 控制给定
+                        console.log('机发送数据 - 控制给定')
+                        this.usbPortSmall.write([
+                          0x01, 0x06, 0x60, 0x40, 0x00, 0x00, 0x96, 0x1e
+                        ])
+                        setTimeout(() => {
+                          // 主机发送数据 - 控制给定
+                          console.log('主机发送数据 - 控制给定')
+                          this.usbPortSmall.write([
+                            0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+                          ])
+                          this.fullscreenLoading = false
+                          this.startTimeSmall = this.$moment().format(
+                            'YYYY-MM-DD HH:mm:ss'
+                          )
+                        }, 1000)
+                      }, 1000)
+                    }, 3000)
+                  }, 1000)
+                }, 1000)
+              }, 1000)
+            }, 1000)
+          }, 1000)
+        }, 1000)
+      }, 1000)
     },
 
     /**
-     * @description: 结束（小型）
+     * @description: 暂停（小型）
      */
     handleStopSmall() {
-      this.isSmall = false
+      this.isSmallStop = true
+
+      this.fullscreenLoading = true
+      // 急停
+      console.log('主机发送数据 - 控制给定（急停）')
+      this.usbPortSmall.write([0x01, 0x06, 0x60, 0x40, 0x00, 0x10, 0x97, 0xd2])
+      this.fullscreenLoading = false
     },
 
     /**
-     * @description: 归0指令（小型）
+     * @description: 继续（小型）
      */
-    zeroSmall() {
-      const order = [
-        '0x01',
-        '0x10',
-        '0x00',
-        '0xf2',
-        '0x00',
-        '0x02',
-        '0x04',
-        '0x00',
-        '0x00',
-        '0x00',
-        '0x00'
-      ]
-      this.usbPortSmall.write(order)
+    handleRestoreSmall() {
+      this.isSmallStop = false
+
+      this.fullscreenLoading = true
+      // 恢复
+      console.log('主机发送数据 - 控制给定（恢复）')
+      this.usbPortSmall.write([0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8])
+      this.fullscreenLoading = false
+
+      this.startTimeSmall = this.$moment().format('YYYY-MM-DD HH:mm:ss')
     },
 
-    /**
-     * @description: 运动至指定位置（小型）
-     */
-    positionSmall() {
-      const absoluteValueSmall = 300
-
-      let baseOrder = []
-      let otherOrder = []
-
-      baseOrder = ['0x01', '0x10', '0x00', '0xf2', '0x00', '0x02', '0x04']
-      let res16 = (Math.pow(2, 32) + -(absoluteValueSmall * 32768)).toString(16)
-
-      const one = '0x' + res16.substring(0, 2)
-      const two = '0x' + res16.substring(2, 4)
-      const three = '0x' + res16.substring(4, 6)
-      const four = '0x' + res16.substring(6, 8)
-      otherOrder = [one, two, three, four]
-
-      const order = baseOrder.concat(otherOrder)
-
-      this.usbPortSmall.write(order)
-    },
-
-    /**
-     * @description: 设置转速（小型）
-     */
-    handleSetSpeedSmall() {
-      if (this.radioSmall === '开启') {
-        let baseOrder = []
-        let otherOrder = []
-        let res16 = '00000000'
-
-        baseOrder = ['0x01', '0x10', '0x00', '0xee', '0x00', '0x02', '0x04']
-        if (this.speedSmall > 0) {
-          res16 = (this.speedSmall * 1000).toString(16)
-          if (res16.length === 1) {
-            res16 = '0000000' + res16
-          } else if (res16.length === 2) {
-            res16 = '000000' + res16
-          } else if (res16.length === 3) {
-            res16 = '00000' + res16
-          } else if (res16.length === 4) {
-            res16 = '0000' + res16
-          } else if (res16.length === 5) {
-            res16 = '000' + res16
-          } else if (res16.length === 6) {
-            res16 = '00' + res16
-          } else if (res16.length === 7) {
-            res16 = '0' + res16
-          }
-        }
-
-        const one = '0x' + res16.substring(0, 2)
-        const two = '0x' + res16.substring(2, 4)
-        const three = '0x' + res16.substring(4, 6)
-        const four = '0x' + res16.substring(6, 8)
-        otherOrder = [one, two, three, four]
-
-        const order = baseOrder.concat(otherOrder)
-
-        this.usbPortSmall.write(order)
-      }
-    },
+    /* -------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
+    /* -------------------------------------------------------------------------- */
 
     /**
      * @description: 数据记录（微型）
@@ -772,8 +836,8 @@ export default {
       //   path: '/',
       //   query: {
       //     electric: JSON.stringify(electric),
-      //     startTime: JSON.stringify(this.startTime),
-      //     endTime: JSON.stringify(this.endTime),
+      //     startTime: JSON.stringify(this.startTimeMiniature),
+      //     endTime: JSON.stringify(this.endTimeMiniature),
       //     routerName: JSON.stringify('/life-test')
       //   }
       // })
@@ -788,8 +852,8 @@ export default {
       //   path: '/',
       //   query: {
       //     electric: JSON.stringify(electric),
-      //     startTime: JSON.stringify(this.startTime),
-      //     endTime: JSON.stringify(this.endTime),
+      //     startTime: JSON.stringify(this.startTimeSmall),
+      //     endTime: JSON.stringify(this.endTimeSmall),
       //     routerName: JSON.stringify('/life-test')
       //   }
       // })
@@ -840,22 +904,6 @@ export default {
         margin-bottom: 15px;
       }
     }
-
-    .set {
-      margin-top: 30px;
-      @include flex(column, center, center);
-      .speed {
-        border: 2px solid black;
-        border-radius: 10px;
-        padding: 20px;
-        .value {
-          margin-top: 40px;
-        }
-      }
-      .btn-speed {
-        margin-top: 20px;
-      }
-    }
   }
 
   .divider {
@@ -882,22 +930,6 @@ export default {
         font-size: 26px;
         font-weight: 700;
         margin-bottom: 15px;
-      }
-    }
-
-    .set {
-      margin-top: 30px;
-      @include flex(column, center, center);
-      .speed {
-        border: 2px solid black;
-        border-radius: 10px;
-        padding: 20px;
-        .value {
-          margin-top: 40px;
-        }
-      }
-      .btn-speed {
-        margin-top: 20px;
       }
     }
   }

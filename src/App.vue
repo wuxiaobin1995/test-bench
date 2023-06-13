@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 11:15:35
- * @LastEditTime: 2023-05-18 17:02:05
+ * @LastEditTime: 2023-06-13 14:16:09
  * @Description : 根组件
 -->
 <template>
@@ -32,7 +32,7 @@ export default {
     }
     /* 初始化减速比-小型 */
     if (!window.localStorage.getItem('reduction-small')) {
-      window.localStorage.setItem('reduction-small', JSON.stringify(7))
+      window.localStorage.setItem('reduction-small', JSON.stringify(1))
     }
 
     /* 初始化左K的值 */
