@@ -1,7 +1,7 @@
 /*
  * @Author      : Mr.bin
  * @Date        : 2023-02-27 10:27:06
- * @LastEditTime: 2023-05-16 11:15:26
+ * @LastEditTime: 2023-06-14 10:59:51
  * @Description : 路由
  */
 import Vue from 'vue'
@@ -51,6 +51,12 @@ const routes = [
     path: '/life-test',
     name: 'life-test',
     component: () => import('@/views/life-test')
+  },
+  /* 寿命测试-数据记录 */
+  {
+    path: '/life-record',
+    name: 'life-record',
+    component: () => import('@/views/life-record')
   },
 
   {

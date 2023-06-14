@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-06-13 17:57:50
+ * @LastEditTime: 2023-06-14 11:32:32
  * @Description : 寿命测试
 -->
 <template>
@@ -32,7 +32,10 @@
           @click="handleRestoreMiniature"
           >继 续</el-button
         >
-        <el-button class="item" type="info" @click="handleRecordMiniature"
+        <el-button class="item" type="info" @click="handleToZero"
+          >调 零</el-button
+        >
+        <el-button class="item" type="info" @click="handleRecord"
           >数据报表</el-button
         >
         <el-button class="item" type="info" @click="handleBack"
@@ -43,9 +46,12 @@
       <el-divider></el-divider>
 
       <div class="num">
-        <div class="value">往返次数：{{ numMiniature }}</div>
-        <div class="value">位移的值mm：{{ displacementMiniature }}</div>
-        <div class="value">压力值kg：{{ pressureMiniature }}</div>
+        <div class="value">实时往返次数：{{ numMiniature }}</div>
+        <div class="value">实时位移值mm：{{ displacementMiniature }}</div>
+        <div class="value">实时压力值kg：{{ pressureMiniature }}</div>
+        <div class="value">最大位移mm：{{ displacementMiniatureMax }}</div>
+        <div class="value">最小位移mm：{{ displacementMiniatureMin }}</div>
+        <div class="value">平均压力值kg：{{ pressureMiniatureAverage }}</div>
       </div>
     </div>
 
@@ -77,7 +83,10 @@
           @click="handleRestoreSmall"
           >继 续</el-button
         >
-        <el-button class="item" type="info" @click="handleRecordSmall"
+        <el-button class="item" type="info" @click="handleToZero"
+          >调 零</el-button
+        >
+        <el-button class="item" type="info" @click="handleRecord"
           >数据报表</el-button
         >
         <el-button class="item" type="info" @click="handleBack"
@@ -88,9 +97,12 @@
       <el-divider></el-divider>
 
       <div class="num">
-        <div class="value">往返次数：{{ numSmall }}</div>
-        <div class="value">位移的值mm：{{ displacementSmall }}</div>
-        <div class="value">压力值kg：{{ pressureSmall }}</div>
+        <div class="value">实时往返次数：{{ numSmall }}</div>
+        <div class="value">实时位移值mm：{{ displacementSmall }}</div>
+        <div class="value">实时压力值kg：{{ pressureSmall }}</div>
+        <div class="value">最大位移mm：{{ displacementSmallMax }}</div>
+        <div class="value">最小位移mm：{{ displacementSmallMin }}</div>
+        <div class="value">平均压力值kg：{{ pressureSmallAverage }}</div>
       </div>
     </div>
   </div>
@@ -142,9 +154,20 @@ export default {
       /* 位移值 */
       displacementMiniature: 0, // 微型，0.00~200.00mm
       displacementSmall: 0, // 小型，0.00~200.00mm
+      displacementMiniatureArray: [], // 微型，一次往复的位移数组，用来记录最大最小位移
+      displacementSmallArray: [], // 小型，一次往复的位移数组，用来记录最大最小位移
+      displacementMiniatureMax: 0, // 微型，最大位移
+      displacementMiniatureMin: 0, // 微型，最小位移
+      displacementSmallMax: 0, // 小型，最大位移
+      displacementSmallMin: 0, // 小型，最小位移
       /* 压力值 */
-      pressureMiniature: 0, // 微型
-      pressureSmall: 0, // 小型
+      pressureMiniature: 0, // 微型，kg
+      pressureSmall: 0, // 小型，kg
+      pressureMiniatureArray: [], // 微型，一次往复的压力值数组，用来记录平均压力值
+      pressureSmallArray: [], // 小型，一次往复的压力值数组，用来记录平均压力值
+      pressureMiniatureAverage: 0, // 微型，平均压力值
+      pressureSmallAverage: 0, // 小型，平均压力值
+
       /* 时间 */
       startTimeMiniature: '', // 开始-微型
       endTimeMiniature: '', // 结束-微型
@@ -167,17 +190,29 @@ export default {
 
     this.oneK = parseFloat(window.localStorage.getItem('oneK'))
     this.twoK = parseFloat(window.localStorage.getItem('twoK'))
+
+    if (this.oneStandard === null || this.twoStandard) {
+      this.$alert(`压力传感器没有调零，请点击“前往调零”按钮！`, `提示`, {
+        type: 'error',
+        showClose: false,
+        center: true,
+        confirmButtonText: '前往调零',
+        callback: () => {
+          this.handleToZero()
+        }
+      })
+    }
   },
   mounted() {
     this.fullscreenLoading = true
     setTimeout(() => {
       this.fullscreenLoading = false
-      // if (this.comReceive) {
-      //   this.initSerialPortReceive()
-      // }
-      // if (this.comSendMiniature) {
-      //   this.initSerialPortSendMiniature()
-      // }
+      if (this.comReceive) {
+        this.initSerialPortReceive()
+      }
+      if (this.comSendMiniature) {
+        this.initSerialPortSendMiniature()
+      }
       if (this.comSendSmall) {
         this.initSerialPortSendSmall()
       }
@@ -211,6 +246,15 @@ export default {
     handleBack() {
       this.$router.push({
         path: '/'
+      })
+    },
+
+    /**
+     * @description: 前往调零页
+     */
+    handleToZero() {
+      this.$router.push({
+        path: '/set-zero'
       })
     },
 
@@ -286,35 +330,85 @@ export default {
                   (
                     (pressureMiniatureDA - this.oneStandard) /
                     -this.oneK
-                  ).toFixed(1)
+                  ).toFixed(2)
                 )
               )
               this.pressureSmall = Math.abs(
                 parseFloat(
-                  ((pressureSmallDA - this.twoStandard) / -this.twoK).toFixed(1)
+                  ((pressureSmallDA - this.twoStandard) / -this.twoK).toFixed(2)
                 )
               )
 
+              /* 50mm~150mm之间往复运动 */
               /* 微型 */
-              if (this.displacementMiniature >= 145) {
+              if (this.displacementMiniature >= 140) {
+                this.displacementMiniatureArray.push(this.displacementMiniature)
                 if (this.numMiniatureTip === true) {
-                  this.numMiniature += 1 // 计数+1
+                  // 计数+1
+                  this.numMiniature += 1
+                  // 位移最大值
+                  this.displacementMiniatureMax = Math.max(
+                    ...this.displacementMiniatureArray
+                  )
+                  // 位移最小值
+                  this.displacementMiniatureMin = Math.min(
+                    ...this.displacementMiniatureArray
+                  )
                 }
                 this.numMiniatureTip = false
               }
-              if (this.displacementMiniature <= 55) {
+              if (this.displacementMiniature <= 60) {
                 this.numMiniatureTip = true
+              }
+              if (this.displacementMiniatureArray.length >= 200) {
+                this.displacementMiniatureArray = []
+              }
+              this.pressureMiniatureArray.push(this.pressureMiniature)
+              if (this.pressureMiniatureArray.length >= 400) {
+                // 压力平均值
+                this.pressureMiniatureAverage = parseFloat(
+                  (
+                    this.pressureMiniatureArray.reduce(
+                      (acc, curr) => acc + curr
+                    ) / this.pressureMiniatureArray.length
+                  ).toFixed(2)
+                )
+                this.pressureMiniatureArray = []
               }
 
               /* 小型 */
-              if (this.displacementSmall >= 145) {
+              if (this.displacementSmall >= 140) {
+                this.displacementSmallArray.push(this.displacementSmall)
                 if (this.smallTip === true) {
-                  this.numSmall += 1 // 计数+1
+                  // 计数+1
+                  this.numSmall += 1
+                  // 位移最大值
+                  this.displacementSmallMax = Math.max(
+                    ...this.displacementSmallArray
+                  )
+                  // 位移最小值
+                  this.displacementSmallMin = Math.min(
+                    ...this.displacementSmallArray
+                  )
                 }
                 this.smallTip = false
               }
-              if (this.displacementSmall <= 55) {
+              if (this.displacementSmall <= 60) {
                 this.smallTip = true
+              }
+              if (this.displacementSmallArray.length >= 200) {
+                this.displacementSmallArray = []
+              }
+              this.pressureSmallArray.push(this.pressureSmall)
+              if (this.pressureSmallArray.length >= 400) {
+                // 压力平均值
+                this.pressureSmallAverage = parseFloat(
+                  (
+                    this.pressureSmallArray.reduce((acc, curr) => acc + curr) /
+                    this.pressureSmallArray.length
+                  ).toFixed(2)
+                )
+                this.pressureSmallArray = []
               }
             })
           } else {
@@ -632,11 +726,11 @@ export default {
 
       this.endTimeMiniature = this.$moment().format('YYYY-MM-DD HH:mm:ss')
 
-      if (this.numMiniature > 100) {
+      if (this.numMiniature > 10) {
         this.saveMiniature()
       } else {
         this.$message({
-          message: '警告：微型电缸往的复次数少于100次，不给予保存！',
+          message: '警告：微型电缸往的复次数少于10次，不给予保存！',
           type: 'warning',
           duration: 5000
         })
@@ -650,15 +744,21 @@ export default {
       const startTimeMiniature = this.startTimeMiniature
       const endTimeMiniature = this.endTimeMiniature
       const numMiniature = this.numMiniature
+      const displacementMiniatureMax = this.displacementMiniatureMax
+      const displacementMiniatureMin = this.displacementMiniatureMin
+      const pressureMiniatureAverage = this.pressureMiniatureAverage
 
       // 保存数据到数据库
       const db = initDB()
       db.life_data
         .add({
           electric: '微型电缸',
-          startTimeMiniature: startTimeMiniature, // 开始时间
-          endTimeMiniature: endTimeMiniature, // 结束时间
-          numMiniature: numMiniature // 往复次数
+          startTime: startTimeMiniature, // 开始时间
+          endTime: endTimeMiniature, // 结束时间
+          num: numMiniature, // 往复次数
+          displacementMax: displacementMiniatureMax, // 最大位移
+          displacementMin: displacementMiniatureMin, // 最小位移
+          pressureAverage: pressureMiniatureAverage // 平均压力
         })
         .then(() => {
           this.$message({
@@ -667,7 +767,14 @@ export default {
             duration: 5000
           })
         })
-        .then(() => {})
+        .then(() => {
+          this.numMiniature = 0
+          this.displacementMiniatureArray = []
+          this.displacementMiniatureMax = 0
+          this.displacementMiniatureMin = 0
+          this.pressureMiniatureArray = []
+          this.pressureMiniatureAverage = 0
+        })
         .catch(() => {
           this.$confirm(`请点击"重新保存"按钮！`, '微型-数据保存失败', {
             type: 'error',
@@ -685,7 +792,6 @@ export default {
               this.handleRefresh()
             })
         })
-        .finally(() => {})
     },
 
     /**
@@ -806,6 +912,75 @@ export default {
       console.log('主机发送数据 - 控制给定（急停）')
       this.usbPortSmall.write([0x01, 0x06, 0x60, 0x40, 0x00, 0x10, 0x97, 0xd2])
       this.fullscreenLoading = false
+
+      this.endTimeSmall = this.$moment().format('YYYY-MM-DD HH:mm:ss')
+
+      if (this.numSmall > 10) {
+        this.saveSmall()
+      } else {
+        this.$message({
+          message: '警告：小型电缸往的复次数少于10次，不给予保存！',
+          type: 'warning',
+          duration: 5000
+        })
+      }
+    },
+
+    /**
+     * @description: 保存数据（小型）
+     */
+    saveSmall() {
+      const startTimeSmall = this.startTimeSmall
+      const endTimeSmall = this.endTimeSmall
+      const numSmall = this.numSmall
+      const displacementSmallMax = this.displacementSmallMax
+      const displacementSmallMin = this.displacementSmallMin
+      const pressureSmallAverage = this.pressureSmallAverage
+
+      // 保存数据到数据库
+      const db = initDB()
+      db.life_data
+        .add({
+          electric: '小型电缸',
+          startTime: startTimeSmall, // 开始时间
+          endTime: endTimeSmall, // 结束时间
+          num: numSmall, // 往复次数
+          displacementMax: displacementSmallMax, // 最大位移
+          displacementMin: displacementSmallMin, // 最小位移
+          pressureAverage: pressureSmallAverage // 平均压力
+        })
+        .then(() => {
+          this.$message({
+            message: '数据保存成功',
+            type: 'success',
+            duration: 5000
+          })
+        })
+        .then(() => {
+          this.numSmall = 0
+          this.displacementSmallArray = []
+          this.displacementSmallMax = 0
+          this.displacementSmallMin = 0
+          this.pressureSmallArray = []
+          this.pressureSmallAverage = 0
+        })
+        .catch(() => {
+          this.$confirm(`请点击"重新保存"按钮！`, '小型-数据保存失败', {
+            type: 'error',
+            showClose: false,
+            closeOnClickModal: false,
+            closeOnPressEscape: false,
+            center: true,
+            confirmButtonText: '重新保存',
+            cancelButtonText: '刷新页面'
+          })
+            .then(() => {
+              this.saveSmall()
+            })
+            .catch(() => {
+              this.handleRefresh()
+            })
+        })
     },
 
     /**
@@ -828,35 +1003,12 @@ export default {
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @description: 数据记录（微型）
+     * @description: 数据记录
      */
-    handleRecordMiniature() {
-      // const electric = '微型电缸'
-      // this.$router.push({
-      //   path: '/',
-      //   query: {
-      //     electric: JSON.stringify(electric),
-      //     startTime: JSON.stringify(this.startTimeMiniature),
-      //     endTime: JSON.stringify(this.endTimeMiniature),
-      //     routerName: JSON.stringify('/life-test')
-      //   }
-      // })
-    },
-
-    /**
-     * @description: 数据记录（小型）
-     */
-    handleRecordSmall() {
-      // const electric = '小型电缸'
-      // this.$router.push({
-      //   path: '/',
-      //   query: {
-      //     electric: JSON.stringify(electric),
-      //     startTime: JSON.stringify(this.startTimeSmall),
-      //     endTime: JSON.stringify(this.endTimeSmall),
-      //     routerName: JSON.stringify('/life-test')
-      //   }
-      // })
+    handleRecord() {
+      this.$router.push({
+        path: '/life-record'
+      })
     },
 
     /**
@@ -894,7 +1046,7 @@ export default {
 
     .num {
       margin-top: 50px;
-      @include flex(column, center, center);
+      @include flex(column, center, stretch);
       .value {
         border: 2px solid black;
         border-radius: 10px;
@@ -922,7 +1074,7 @@ export default {
 
     .num {
       margin-top: 50px;
-      @include flex(column, center, center);
+      @include flex(column, center, stretch);
       .value {
         border: 2px solid black;
         border-radius: 10px;
