@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-06-14 11:32:32
+ * @LastEditTime: 2023-06-14 16:30:25
  * @Description : 寿命测试
 -->
 <template>
@@ -21,14 +21,14 @@
         <el-button
           class="item"
           type="danger"
-          :disabled="!isMiniatureStart || isMiniatureStop"
+          :disabled="isMiniatureStop"
           @click="handleStopMiniature"
           >暂 停</el-button
         >
         <el-button
           class="item"
           type="success"
-          :disabled="!isMiniatureStart || !isMiniatureStop"
+          :disabled="!isMiniatureStop"
           @click="handleRestoreMiniature"
           >继 续</el-button
         >
@@ -48,7 +48,7 @@
       <div class="num">
         <div class="value">实时往返次数：{{ numMiniature }}</div>
         <div class="value">实时位移值mm：{{ displacementMiniature }}</div>
-        <div class="value">实时压力值kg：{{ pressureMiniature }}</div>
+        <!-- <div class="value">实时压力值kg：{{ pressureMiniature }}</div> -->
         <div class="value">最大位移mm：{{ displacementMiniatureMax }}</div>
         <div class="value">最小位移mm：{{ displacementMiniatureMin }}</div>
         <div class="value">平均压力值kg：{{ pressureMiniatureAverage }}</div>
@@ -72,14 +72,14 @@
         <el-button
           class="item"
           type="danger"
-          :disabled="!isSmallStart || isSmallStop"
+          :disabled="isSmallStop"
           @click="handleStopSmall"
           >暂 停</el-button
         >
         <el-button
           class="item"
           type="success"
-          :disabled="!isSmallStart || !isSmallStop"
+          :disabled="!isSmallStop"
           @click="handleRestoreSmall"
           >继 续</el-button
         >
@@ -99,7 +99,7 @@
       <div class="num">
         <div class="value">实时往返次数：{{ numSmall }}</div>
         <div class="value">实时位移值mm：{{ displacementSmall }}</div>
-        <div class="value">实时压力值kg：{{ pressureSmall }}</div>
+        <!-- <div class="value">实时压力值kg：{{ pressureSmall }}</div> -->
         <div class="value">最大位移mm：{{ displacementSmallMax }}</div>
         <div class="value">最小位移mm：{{ displacementSmallMin }}</div>
         <div class="value">平均压力值kg：{{ pressureSmallAverage }}</div>
@@ -175,6 +175,10 @@ export default {
       endTimeSmall: '', // 结束-小型
 
       /* 其他 */
+      oneK: 0,
+      twoK: 0,
+      oneStandard: 0,
+      twoStandard: 0,
       numMiniatureTip: false, // 标记位
       smallTip: false // 标记位
     }
@@ -191,7 +195,7 @@ export default {
     this.oneK = parseFloat(window.localStorage.getItem('oneK'))
     this.twoK = parseFloat(window.localStorage.getItem('twoK'))
 
-    if (this.oneStandard === null || this.twoStandard) {
+    if (this.oneStandard === null || this.twoStandard === null) {
       this.$alert(`压力传感器没有调零，请点击“前往调零”按钮！`, `提示`, {
         type: 'error',
         showClose: false,
@@ -341,7 +345,7 @@ export default {
 
               /* 50mm~150mm之间往复运动 */
               /* 微型 */
-              if (this.displacementMiniature >= 140) {
+              if (this.displacementMiniature >= 130) {
                 this.displacementMiniatureArray.push(this.displacementMiniature)
                 if (this.numMiniatureTip === true) {
                   // 计数+1
@@ -354,30 +358,33 @@ export default {
                   this.displacementMiniatureMin = Math.min(
                     ...this.displacementMiniatureArray
                   )
+                  // 平均压力值
+                  this.pressureMiniatureAverage = this.pressureMiniature
                 }
                 this.numMiniatureTip = false
               }
               if (this.displacementMiniature <= 60) {
+                this.displacementMiniatureArray.push(this.displacementMiniature)
                 this.numMiniatureTip = true
               }
-              if (this.displacementMiniatureArray.length >= 200) {
+              if (this.displacementMiniatureArray.length >= 100) {
                 this.displacementMiniatureArray = []
               }
-              this.pressureMiniatureArray.push(this.pressureMiniature)
-              if (this.pressureMiniatureArray.length >= 400) {
-                // 压力平均值
-                this.pressureMiniatureAverage = parseFloat(
-                  (
-                    this.pressureMiniatureArray.reduce(
-                      (acc, curr) => acc + curr
-                    ) / this.pressureMiniatureArray.length
-                  ).toFixed(2)
-                )
-                this.pressureMiniatureArray = []
-              }
+              // this.pressureMiniatureArray.push(this.pressureMiniature)
+              // if (this.pressureMiniatureArray.length >= 400) {
+              //   // 压力平均值
+              //   this.pressureMiniatureAverage = parseFloat(
+              //     (
+              //       this.pressureMiniatureArray.reduce(
+              //         (acc, curr) => acc + curr
+              //       ) / this.pressureMiniatureArray.length
+              //     ).toFixed(2)
+              //   )
+              //   this.pressureMiniatureArray = []
+              // }
 
               /* 小型 */
-              if (this.displacementSmall >= 140) {
+              if (this.displacementSmall >= 130) {
                 this.displacementSmallArray.push(this.displacementSmall)
                 if (this.smallTip === true) {
                   // 计数+1
@@ -390,26 +397,29 @@ export default {
                   this.displacementSmallMin = Math.min(
                     ...this.displacementSmallArray
                   )
+                  // 平均压力值
+                  this.pressureSmallAverage = this.pressureSmall
                 }
                 this.smallTip = false
               }
               if (this.displacementSmall <= 60) {
+                this.displacementSmallArray.push(this.displacementSmall)
                 this.smallTip = true
               }
-              if (this.displacementSmallArray.length >= 200) {
+              if (this.displacementSmallArray.length >= 100) {
                 this.displacementSmallArray = []
               }
-              this.pressureSmallArray.push(this.pressureSmall)
-              if (this.pressureSmallArray.length >= 400) {
-                // 压力平均值
-                this.pressureSmallAverage = parseFloat(
-                  (
-                    this.pressureSmallArray.reduce((acc, curr) => acc + curr) /
-                    this.pressureSmallArray.length
-                  ).toFixed(2)
-                )
-                this.pressureSmallArray = []
-              }
+              // this.pressureSmallArray.push(this.pressureSmall)
+              // if (this.pressureSmallArray.length >= 400) {
+              //   // 压力平均值
+              //   this.pressureSmallAverage = parseFloat(
+              //     (
+              //       this.pressureSmallArray.reduce((acc, curr) => acc + curr) /
+              //       this.pressureSmallArray.length
+              //     ).toFixed(2)
+              //   )
+              //   this.pressureSmallArray = []
+              // }
             })
           } else {
             this.$alert(

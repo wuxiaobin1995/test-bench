@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-06-14 11:03:02
- * @LastEditTime: 2023-06-14 11:32:15
+ * @LastEditTime: 2023-06-14 14:10:38
  * @Description : 寿命测试-数据记录
 -->
 <template>
@@ -10,10 +10,20 @@
     <div class="top">
       <!-- 标题 -->
       <el-page-header
+        class="item"
         title="返回寿命测试"
         content="寿命测试-数据记录"
         @back="handleToLifeTest"
       ></el-page-header>
+      <!-- 导出Excel按钮 -->
+      <el-button
+        class="item"
+        :loading="exportExcelLoading"
+        icon="el-icon-download"
+        type="warning"
+        @click="handleExportExcel"
+        >导出 Excel</el-button
+      >
     </div>
 
     <!-- 表格 -->
@@ -101,8 +111,10 @@ export default {
 
   data() {
     return {
-      tableData: [],
-      loading: false // 表格加载动画
+      loading: false, // 表格加载动画
+      exportExcelLoading: false, //导出加载动画
+
+      tableData: []
     }
   },
 
@@ -196,6 +208,77 @@ export default {
     },
 
     /**
+     * @description: 导出Excel按钮
+     */
+    handleExportExcel() {
+      if (this.tableData.length) {
+        this.exportExcelLoading = true
+        // 此处使用懒加载的方式
+        import('@/utils/Export2Excel.js')
+          .then(excel => {
+            const excelTitle = {
+              electric: '型号',
+              startTime: '开始时间',
+              endTime: '结束时间',
+              num: '往复次数',
+              displacementMax: '最大位移mm',
+              displacementMin: '最小位移mm',
+              pressureAverage: '平均压力值kg'
+            }
+            const tHeader = Object.values(excelTitle)
+            // 会根据key键的顺序、属性值等动态变化
+            const filterVal = Object.keys(excelTitle)
+            const exportData = this.formatJson(filterVal, this.tableData)
+            excel.export_json_to_excel({
+              header: tHeader, // 表头 必填
+              data: exportData, // 具体数据 必填
+              filename:
+                '下蹲与控制反馈系统训练仪-单机版-所有用户信息 ' +
+                this.$moment().format('YYYY-MM-DD HH_mm_ss'), // 导出文件名，非必填
+              autoWidth: true, // 自适应列宽，非必填
+              bookType: 'xlsx' // 导出格式，非必填
+            })
+          })
+          .then(() => {
+            this.$message({
+              message: '导出Excel成功',
+              type: 'success',
+              duration: 3000
+            })
+          })
+          .catch(err => {
+            this.$message({
+              message: `导出Excel失败：${err}`,
+              type: 'error',
+              duration: 5000
+            })
+          })
+          .finally(() => {
+            this.exportExcelLoading = false
+          })
+      } else {
+        this.$message({
+          message: '表格数据不能为空！',
+          type: 'error',
+          duration: 3000
+        })
+      }
+    },
+    /**
+     * @description: 数据格式化，将 [{},{},...] => [[],[],...]
+     * @param {Array} filterVal key键
+     * @param {Array} jsonData [{},{},...]
+     * @return {Array} 二维数组 [[],[],...]
+     */
+    formatJson(filterVal, jsonData) {
+      return jsonData.map(v =>
+        filterVal.map(j => {
+          return v[j]
+        })
+      )
+    },
+
+    /**
      * @description: 刷新页面
      */
     handleRefresh() {
@@ -221,10 +304,8 @@ export default {
   .top {
     margin: 10px 0;
     @include flex(row, center, center);
-    // 标题
-    .text {
-      font-size: 32px;
-      color: green;
+    .item {
+      margin-right: 50px;
     }
   }
 
