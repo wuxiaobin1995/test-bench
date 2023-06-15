@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-06-14 16:30:25
+ * @LastEditTime: 2023-06-15 09:55:02
  * @Description : 寿命测试
 -->
 <template>
@@ -16,7 +16,7 @@
           type="primary"
           :disabled="isMiniatureStart"
           @click="handleStartMiniature"
-          >开 始</el-button
+          >初始化</el-button
         >
         <el-button
           class="item"
@@ -67,7 +67,7 @@
           type="primary"
           :disabled="isSmallStart"
           @click="handleStartSmall"
-          >开 始</el-button
+          >初始化</el-button
         >
         <el-button
           class="item"
@@ -160,13 +160,19 @@ export default {
       displacementMiniatureMin: 0, // 微型，最小位移
       displacementSmallMax: 0, // 小型，最大位移
       displacementSmallMin: 0, // 小型，最小位移
+      displacementMiniatureMaxArray: [], // 微型，多次往复的最大位移数组，用于求平均最大位移值
+      displacementMiniatureMinArray: [], // 微型，多次往复的最小位移数组，用于求平均最小位移值
+      displacementSmallMaxArray: [], // 小型，多次往复的最大位移数组，用于求平均最大位移值
+      displacementSmallMinArray: [], // 小型，多次往复的最小位移数组，用于求平均最小位移值
       /* 压力值 */
       pressureMiniature: 0, // 微型，kg
       pressureSmall: 0, // 小型，kg
       pressureMiniatureArray: [], // 微型，一次往复的压力值数组，用来记录平均压力值
       pressureSmallArray: [], // 小型，一次往复的压力值数组，用来记录平均压力值
-      pressureMiniatureAverage: 0, // 微型，平均压力值
-      pressureSmallAverage: 0, // 小型，平均压力值
+      pressureMiniatureAverage: 0, // 微型，一次往复平均压力值
+      pressureSmallAverage: 0, // 小型，一次往复平均压力值
+      pressureMiniatureAverageArray: [], // 微型，多次往复的压力值，用于求平均压力值
+      pressureSmallAverageArray: [], // 小型，多次往复的压力值，用于求平均压力值
 
       /* 时间 */
       startTimeMiniature: '', // 开始-微型
@@ -343,7 +349,7 @@ export default {
                 )
               )
 
-              /* 50mm~150mm之间往复运动 */
+              /* 电缸50mm~150mm之间往复运动 */
               /* 微型 */
               if (this.displacementMiniature >= 130) {
                 this.displacementMiniatureArray.push(this.displacementMiniature)
@@ -354,12 +360,23 @@ export default {
                   this.displacementMiniatureMax = Math.max(
                     ...this.displacementMiniatureArray
                   )
+                  this.displacementMiniatureMaxArray.push(
+                    this.displacementMiniatureMax
+                  )
                   // 位移最小值
                   this.displacementMiniatureMin = Math.min(
                     ...this.displacementMiniatureArray
                   )
-                  // 平均压力值
+                  this.displacementMiniatureMinArray.push(
+                    this.displacementMiniatureMin
+                  )
+                  // 压力值
                   this.pressureMiniatureAverage = this.pressureMiniature
+                  this.pressureMiniatureAverageArray.push(
+                    this.pressureMiniatureAverage
+                  )
+
+                  this.displacementMiniatureArray = []
                 }
                 this.numMiniatureTip = false
               }
@@ -367,8 +384,11 @@ export default {
                 this.displacementMiniatureArray.push(this.displacementMiniature)
                 this.numMiniatureTip = true
               }
-              if (this.displacementMiniatureArray.length >= 100) {
-                this.displacementMiniatureArray = []
+              // 防止爆内存
+              if (this.displacementMiniatureMaxArray.length >= 500) {
+                this.displacementMiniatureMaxArray = []
+                this.displacementMiniatureMinArray = []
+                this.pressureMiniatureAverageArray = []
               }
               // this.pressureMiniatureArray.push(this.pressureMiniature)
               // if (this.pressureMiniatureArray.length >= 400) {
@@ -393,12 +413,17 @@ export default {
                   this.displacementSmallMax = Math.max(
                     ...this.displacementSmallArray
                   )
+                  this.displacementSmallMaxArray.push(this.displacementSmallMax)
                   // 位移最小值
                   this.displacementSmallMin = Math.min(
                     ...this.displacementSmallArray
                   )
-                  // 平均压力值
+                  this.displacementSmallMinArray.push(this.displacementSmallMin)
+                  // 压力值
                   this.pressureSmallAverage = this.pressureSmall
+                  this.pressureSmallAverageArray.push(this.pressureSmallAverage)
+
+                  this.displacementSmallArray = []
                 }
                 this.smallTip = false
               }
@@ -406,8 +431,11 @@ export default {
                 this.displacementSmallArray.push(this.displacementSmall)
                 this.smallTip = true
               }
-              if (this.displacementSmallArray.length >= 100) {
-                this.displacementSmallArray = []
+              // 防止爆内存
+              if (this.displacementSmallMaxArray.length >= 500) {
+                this.displacementSmallMaxArray = []
+                this.displacementSmallMinArray = []
+                this.pressureSmallAverageArray = []
               }
               // this.pressureSmallArray.push(this.pressureSmall)
               // if (this.pressureSmallArray.length >= 400) {
@@ -633,91 +661,104 @@ export default {
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @description: 开始（微型）
+     * @description: 初始化（微型）
      */
     handleStartMiniature() {
-      this.isMiniatureStart = true
+      this.$confirm(
+        `该按钮是初始化操作，若电缸已经初始化过了，请点击“取消”按钮！`,
+        '提示',
+        {
+          type: 'warning',
+          center: true,
+          confirmButtonText: '确 认',
+          cancelButtonText: '取 消'
+        }
+      )
+        .then(() => {
+          this.isMiniatureStart = true
 
-      this.fullscreenLoading = true
-      // 主机发送数据 - 模式给定
-      console.log('主机发送数据 - 模式给定')
-      this.usbPortMiniature.write([
-        0x01, 0x06, 0x60, 0x60, 0x00, 0x10, 0x96, 0x18
-      ])
-      setTimeout(() => {
-        // 主机发送数据 - 每圈脉冲数（500）
-        console.log('主机发送数据 - 每圈脉冲数（500）')
-        this.usbPortMiniature.write([
-          0x01, 0x06, 0x20, 0x33, 0x01, 0xf4, 0x72, 0x12
-        ])
-        setTimeout(() => {
-          // 主机发送数据 - 第一段位置给定（先给负数）
-          console.log('主机发送数据 - 第一段位置给定（先给负数）')
+          this.fullscreenLoading = true
+          // 主机发送数据 - 模式给定
+          console.log('主机发送数据 - 模式给定')
           this.usbPortMiniature.write([
-            0x01, 0x06, 0x20, 0x40, 0xd8, 0xf0, 0xd9, 0x9a
+            0x01, 0x06, 0x60, 0x60, 0x00, 0x10, 0x96, 0x18
           ])
           setTimeout(() => {
-            // 主机发送数据 - 第二段位置给定（再给正数）
-            console.log('主机发送数据 - 第二段位置给定（再给正数）')
+            // 主机发送数据 - 每圈脉冲数（500）
+            console.log('主机发送数据 - 每圈脉冲数（500）')
             this.usbPortMiniature.write([
-              0x01, 0x06, 0x20, 0x41, 0x27, 0x10, 0xc8, 0x22
+              0x01, 0x06, 0x20, 0x33, 0x01, 0xf4, 0x72, 0x12
             ])
             setTimeout(() => {
-              // 主机发送数据 - 第一段速度给定
-              console.log('主机发送数据 - 第一段速度给定')
+              // 主机发送数据 - 第一段位置给定（先给负数）
+              console.log('主机发送数据 - 第一段位置给定（先给负数）')
               this.usbPortMiniature.write([
-                0x01, 0x06, 0x20, 0x44, 0x01, 0xf4, 0xc2, 0x08
+                0x01, 0x06, 0x20, 0x40, 0xd8, 0xf0, 0xd9, 0x9a
               ])
               setTimeout(() => {
-                // 主机发送数据 - 第二段速度给定
-                console.log('主机发送数据 - 第二段速度给定')
+                // 主机发送数据 - 第二段位置给定（再给正数）
+                console.log('主机发送数据 - 第二段位置给定（再给正数）')
                 this.usbPortMiniature.write([
-                  0x01, 0x06, 0x20, 0x45, 0x01, 0xf4, 0x93, 0xc8
+                  0x01, 0x06, 0x20, 0x41, 0x27, 0x10, 0xc8, 0x22
                 ])
                 setTimeout(() => {
-                  // 主机发送数据 - 系统密码
-                  console.log('主机发送数据 - 系统密码')
+                  // 主机发送数据 - 第一段速度给定
+                  console.log('主机发送数据 - 第一段速度给定')
                   this.usbPortMiniature.write([
-                    0x01, 0x06, 0x20, 0x20, 0x00, 0x7b, 0xc3, 0xe3
+                    0x01, 0x06, 0x20, 0x44, 0x01, 0xf4, 0xc2, 0x08
                   ])
                   setTimeout(() => {
-                    // 主机发送数据 - 关机保存
-                    console.log('主机发送数据 - 关机保存')
+                    // 主机发送数据 - 第二段速度给定
+                    console.log('主机发送数据 - 第二段速度给定')
                     this.usbPortMiniature.write([
-                      0x01, 0x06, 0x20, 0x21, 0x00, 0x01, 0x13, 0xc0
+                      0x01, 0x06, 0x20, 0x45, 0x01, 0xf4, 0x93, 0xc8
                     ])
                     setTimeout(() => {
-                      // 主机发送数据 - 重新启动
-                      console.log('主机发送数据 - 重新启动')
+                      // 主机发送数据 - 系统密码
+                      console.log('主机发送数据 - 系统密码')
                       this.usbPortMiniature.write([
-                        0x01, 0x06, 0x20, 0x24, 0x00, 0x01, 0x03, 0xc1
+                        0x01, 0x06, 0x20, 0x20, 0x00, 0x7b, 0xc3, 0xe3
                       ])
                       setTimeout(() => {
-                        // 主机发送数据 - 控制给定
-                        console.log('机发送数据 - 控制给定')
+                        // 主机发送数据 - 关机保存
+                        console.log('主机发送数据 - 关机保存')
                         this.usbPortMiniature.write([
-                          0x01, 0x06, 0x60, 0x40, 0x00, 0x00, 0x96, 0x1e
+                          0x01, 0x06, 0x20, 0x21, 0x00, 0x01, 0x13, 0xc0
                         ])
                         setTimeout(() => {
-                          // 主机发送数据 - 控制给定
-                          console.log('主机发送数据 - 控制给定')
+                          // 主机发送数据 - 重新启动
+                          console.log('主机发送数据 - 重新启动')
                           this.usbPortMiniature.write([
-                            0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+                            0x01, 0x06, 0x20, 0x24, 0x00, 0x01, 0x03, 0xc1
                           ])
-                          this.fullscreenLoading = false
-                          this.startTimeMiniature = this.$moment().format(
-                            'YYYY-MM-DD HH:mm:ss'
-                          )
-                        }, 1000)
+                          setTimeout(() => {
+                            // 主机发送数据 - 控制给定
+                            console.log('机发送数据 - 控制给定')
+                            this.usbPortMiniature.write([
+                              0x01, 0x06, 0x60, 0x40, 0x00, 0x00, 0x96, 0x1e
+                            ])
+                            setTimeout(() => {
+                              // 主机发送数据 - 控制给定
+                              console.log('主机发送数据 - 控制给定')
+                              this.usbPortMiniature.write([
+                                0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+                              ])
+                              this.fullscreenLoading = false
+                              this.startTimeMiniature = this.$moment().format(
+                                'YYYY-MM-DD HH:mm:ss'
+                              )
+                            }, 1000)
+                          }, 1000)
+                        }, 3000)
                       }, 1000)
-                    }, 3000)
+                    }, 1000)
                   }, 1000)
                 }, 1000)
               }, 1000)
             }, 1000)
           }, 1000)
-        }, 1000)
-      }, 1000)
+        })
+        .catch(() => {})
     },
 
     /**
@@ -754,9 +795,27 @@ export default {
       const startTimeMiniature = this.startTimeMiniature
       const endTimeMiniature = this.endTimeMiniature
       const numMiniature = this.numMiniature
-      const displacementMiniatureMax = this.displacementMiniatureMax
-      const displacementMiniatureMin = this.displacementMiniatureMin
-      const pressureMiniatureAverage = this.pressureMiniatureAverage
+      this.displacementMiniatureMaxArray.shift() // 删除第一个值（因为第一个值不准）
+      this.displacementMiniatureMinArray.shift() // 删除第一个值（因为第一个值不准）
+      this.pressureMiniatureAverageArray.shift() // 删除第一个值（因为第一个值不准）
+      const displacementMiniatureMaxAverage = parseFloat(
+        (
+          this.displacementMiniatureMaxArray.reduce((acc, curr) => acc + curr) /
+          this.displacementMiniatureMaxArray.length
+        ).toFixed(2)
+      )
+      const displacementMiniatureMinAverage = parseFloat(
+        (
+          this.displacementMiniatureMinArray.reduce((acc, curr) => acc + curr) /
+          this.displacementMiniatureMinArray.length
+        ).toFixed(2)
+      )
+      const pressureMiniatureAverageResult = parseFloat(
+        (
+          this.pressureMiniatureAverageArray.reduce((acc, curr) => acc + curr) /
+          this.pressureMiniatureAverageArray.length
+        ).toFixed(2)
+      )
 
       // 保存数据到数据库
       const db = initDB()
@@ -766,9 +825,9 @@ export default {
           startTime: startTimeMiniature, // 开始时间
           endTime: endTimeMiniature, // 结束时间
           num: numMiniature, // 往复次数
-          displacementMax: displacementMiniatureMax, // 最大位移
-          displacementMin: displacementMiniatureMin, // 最小位移
-          pressureAverage: pressureMiniatureAverage // 平均压力
+          displacementMax: displacementMiniatureMaxAverage, // 多次往复最大位移平均
+          displacementMin: displacementMiniatureMinAverage, // 多次往复最小位移平均
+          pressureAverage: pressureMiniatureAverageResult // 多次往复压力平均
         })
         .then(() => {
           this.$message({
@@ -782,8 +841,11 @@ export default {
           this.displacementMiniatureArray = []
           this.displacementMiniatureMax = 0
           this.displacementMiniatureMin = 0
+          this.displacementMiniatureMaxArray = []
+          this.displacementMiniatureMinArray = []
           this.pressureMiniatureArray = []
           this.pressureMiniatureAverage = 0
+          this.pressureMiniatureAverageArray = []
         })
         .catch(() => {
           this.$confirm(`请点击"重新保存"按钮！`, '微型-数据保存失败', {
@@ -826,89 +888,104 @@ export default {
     /* -------------------------------------------------------------------------- */
 
     /**
-     * @description: 开始（小型）
+     * @description: 初始化（小型）
      */
     handleStartSmall() {
-      this.isSmallStart = true
+      this.$confirm(
+        `该按钮是初始化操作，若电缸已经初始化过了，请点击“取消”按钮！`,
+        '提示',
+        {
+          type: 'warning',
+          center: true,
+          confirmButtonText: '确 认',
+          cancelButtonText: '取 消'
+        }
+      )
+        .then(() => {
+          this.isSmallStart = true
 
-      this.fullscreenLoading = true
-      // 主机发送数据 - 模式给定
-      console.log('主机发送数据 - 模式给定')
-      this.usbPortSmall.write([0x01, 0x06, 0x60, 0x60, 0x00, 0x10, 0x96, 0x18])
-      setTimeout(() => {
-        // 主机发送数据 - 每圈脉冲数（500）
-        console.log('主机发送数据 - 每圈脉冲数（500）')
-        this.usbPortSmall.write([
-          0x01, 0x06, 0x20, 0x33, 0x01, 0xf4, 0x72, 0x12
-        ])
-        setTimeout(() => {
-          // 主机发送数据 - 第一段位置给定（先给负数）
-          console.log('主机发送数据 - 第一段位置给定（先给负数）')
+          this.fullscreenLoading = true
+          // 主机发送数据 - 模式给定
+          console.log('主机发送数据 - 模式给定')
           this.usbPortSmall.write([
-            0x01, 0x06, 0x20, 0x40, 0xd8, 0xf0, 0xd9, 0x9a
+            0x01, 0x06, 0x60, 0x60, 0x00, 0x10, 0x96, 0x18
           ])
           setTimeout(() => {
-            // 主机发送数据 - 第二段位置给定（再给正数）
-            console.log('主机发送数据 - 第二段位置给定（再给正数）')
+            // 主机发送数据 - 每圈脉冲数（500）
+            console.log('主机发送数据 - 每圈脉冲数（500）')
             this.usbPortSmall.write([
-              0x01, 0x06, 0x20, 0x41, 0x27, 0x10, 0xc8, 0x22
+              0x01, 0x06, 0x20, 0x33, 0x01, 0xf4, 0x72, 0x12
             ])
             setTimeout(() => {
-              // 主机发送数据 - 第一段速度给定
-              console.log('主机发送数据 - 第一段速度给定')
+              // 主机发送数据 - 第一段位置给定（先给负数）
+              console.log('主机发送数据 - 第一段位置给定（先给负数）')
               this.usbPortSmall.write([
-                0x01, 0x06, 0x20, 0x44, 0x01, 0xf4, 0xc2, 0x08
+                0x01, 0x06, 0x20, 0x40, 0xd8, 0xf0, 0xd9, 0x9a
               ])
               setTimeout(() => {
-                // 主机发送数据 - 第二段速度给定
-                console.log('主机发送数据 - 第二段速度给定')
+                // 主机发送数据 - 第二段位置给定（再给正数）
+                console.log('主机发送数据 - 第二段位置给定（再给正数）')
                 this.usbPortSmall.write([
-                  0x01, 0x06, 0x20, 0x45, 0x01, 0xf4, 0x93, 0xc8
+                  0x01, 0x06, 0x20, 0x41, 0x27, 0x10, 0xc8, 0x22
                 ])
                 setTimeout(() => {
-                  // 主机发送数据 - 系统密码
-                  console.log('主机发送数据 - 系统密码')
+                  // 主机发送数据 - 第一段速度给定
+                  console.log('主机发送数据 - 第一段速度给定')
                   this.usbPortSmall.write([
-                    0x01, 0x06, 0x20, 0x20, 0x00, 0x7b, 0xc3, 0xe3
+                    0x01, 0x06, 0x20, 0x44, 0x01, 0xf4, 0xc2, 0x08
                   ])
                   setTimeout(() => {
-                    // 主机发送数据 - 关机保存
-                    console.log('主机发送数据 - 关机保存')
+                    // 主机发送数据 - 第二段速度给定
+                    console.log('主机发送数据 - 第二段速度给定')
                     this.usbPortSmall.write([
-                      0x01, 0x06, 0x20, 0x21, 0x00, 0x01, 0x13, 0xc0
+                      0x01, 0x06, 0x20, 0x45, 0x01, 0xf4, 0x93, 0xc8
                     ])
                     setTimeout(() => {
-                      // 主机发送数据 - 重新启动
-                      console.log('主机发送数据 - 重新启动')
+                      // 主机发送数据 - 系统密码
+                      console.log('主机发送数据 - 系统密码')
                       this.usbPortSmall.write([
-                        0x01, 0x06, 0x20, 0x24, 0x00, 0x01, 0x03, 0xc1
+                        0x01, 0x06, 0x20, 0x20, 0x00, 0x7b, 0xc3, 0xe3
                       ])
                       setTimeout(() => {
-                        // 主机发送数据 - 控制给定
-                        console.log('机发送数据 - 控制给定')
+                        // 主机发送数据 - 关机保存
+                        console.log('主机发送数据 - 关机保存')
                         this.usbPortSmall.write([
-                          0x01, 0x06, 0x60, 0x40, 0x00, 0x00, 0x96, 0x1e
+                          0x01, 0x06, 0x20, 0x21, 0x00, 0x01, 0x13, 0xc0
                         ])
                         setTimeout(() => {
-                          // 主机发送数据 - 控制给定
-                          console.log('主机发送数据 - 控制给定')
+                          // 主机发送数据 - 重新启动
+                          console.log('主机发送数据 - 重新启动')
                           this.usbPortSmall.write([
-                            0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+                            0x01, 0x06, 0x20, 0x24, 0x00, 0x01, 0x03, 0xc1
                           ])
-                          this.fullscreenLoading = false
-                          this.startTimeSmall = this.$moment().format(
-                            'YYYY-MM-DD HH:mm:ss'
-                          )
-                        }, 1000)
+                          setTimeout(() => {
+                            // 主机发送数据 - 控制给定
+                            console.log('机发送数据 - 控制给定')
+                            this.usbPortSmall.write([
+                              0x01, 0x06, 0x60, 0x40, 0x00, 0x00, 0x96, 0x1e
+                            ])
+                            setTimeout(() => {
+                              // 主机发送数据 - 控制给定
+                              console.log('主机发送数据 - 控制给定')
+                              this.usbPortSmall.write([
+                                0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+                              ])
+                              this.fullscreenLoading = false
+                              this.startTimeSmall = this.$moment().format(
+                                'YYYY-MM-DD HH:mm:ss'
+                              )
+                            }, 1000)
+                          }, 1000)
+                        }, 3000)
                       }, 1000)
-                    }, 3000)
+                    }, 1000)
                   }, 1000)
                 }, 1000)
               }, 1000)
             }, 1000)
           }, 1000)
-        }, 1000)
-      }, 1000)
+        })
+        .catch(() => {})
     },
 
     /**
@@ -943,9 +1020,27 @@ export default {
       const startTimeSmall = this.startTimeSmall
       const endTimeSmall = this.endTimeSmall
       const numSmall = this.numSmall
-      const displacementSmallMax = this.displacementSmallMax
-      const displacementSmallMin = this.displacementSmallMin
-      const pressureSmallAverage = this.pressureSmallAverage
+      this.displacementSmallMaxArray.shift() // 删除第一个值（因为第一个值不准）
+      this.displacementSmallMinArray.shift() // 删除第一个值（因为第一个值不准）
+      this.pressureSmallAverageArray.shift() // 删除第一个值（因为第一个值不准）
+      const displacementSmallMaxAverage = parseFloat(
+        (
+          this.displacementSmallMaxArray.reduce((acc, curr) => acc + curr) /
+          this.displacementSmallMaxArray.length
+        ).toFixed(2)
+      )
+      const displacementSmallMinAverage = parseFloat(
+        (
+          this.displacementSmallMinArray.reduce((acc, curr) => acc + curr) /
+          this.displacementSmallMinArray.length
+        ).toFixed(2)
+      )
+      const pressureSmallAverageResult = parseFloat(
+        (
+          this.pressureSmallAverageArray.reduce((acc, curr) => acc + curr) /
+          this.pressureSmallAverageArray.length
+        ).toFixed(2)
+      )
 
       // 保存数据到数据库
       const db = initDB()
@@ -955,9 +1050,9 @@ export default {
           startTime: startTimeSmall, // 开始时间
           endTime: endTimeSmall, // 结束时间
           num: numSmall, // 往复次数
-          displacementMax: displacementSmallMax, // 最大位移
-          displacementMin: displacementSmallMin, // 最小位移
-          pressureAverage: pressureSmallAverage // 平均压力
+          displacementMax: displacementSmallMaxAverage, // 多次往复最大位移平均
+          displacementMin: displacementSmallMinAverage, // 多次往复最小位移平均
+          pressureAverage: pressureSmallAverageResult // 多次往复压力平均
         })
         .then(() => {
           this.$message({
@@ -971,8 +1066,11 @@ export default {
           this.displacementSmallArray = []
           this.displacementSmallMax = 0
           this.displacementSmallMin = 0
+          this.displacementSmallMaxArray = []
+          this.displacementSmallMinArray = []
           this.pressureSmallArray = []
           this.pressureSmallAverage = 0
+          this.pressureSmallAverageArray = []
         })
         .catch(() => {
           this.$confirm(`请点击"重新保存"按钮！`, '小型-数据保存失败', {
