@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-06-16 11:31:14
+ * @LastEditTime: 2023-06-16 11:25:13
  * @Description : 寿命测试
 -->
 <template>
@@ -12,7 +12,6 @@
 
       <div class="btn">
         <el-button
-          :style="{ display: 'none' }"
           class="item"
           type="primary"
           :disabled="isMiniatureStart"
@@ -22,16 +21,16 @@
         <el-button
           class="item"
           type="danger"
-          :disabled="!isMiniatureStop"
+          :disabled="isMiniatureStop"
           @click="handleStopMiniature"
-          >结束记录</el-button
+          >暂 停</el-button
         >
         <el-button
           class="item"
           type="success"
-          :disabled="isMiniatureStop"
+          :disabled="!isMiniatureStop"
           @click="handleRestoreMiniature"
-          >开始记录</el-button
+          >继 续</el-button
         >
         <el-button class="item" type="info" @click="handleToZero"
           >调 零</el-button
@@ -221,9 +220,9 @@ export default {
       if (this.comReceive) {
         this.initSerialPortReceive()
       }
-      // if (this.comSendMiniature) {
-      //   this.initSerialPortSendMiniature()
-      // }
+      if (this.comSendMiniature) {
+        this.initSerialPortSendMiniature()
+      }
       if (this.comSendSmall) {
         this.initSerialPortSendSmall()
       }
@@ -768,13 +767,13 @@ export default {
     handleStopMiniature() {
       this.isMiniatureStop = true
 
-      // this.fullscreenLoading = true
-      // // 急停
-      // console.log('主机发送数据 - 控制给定（急停）')
-      // this.usbPortMiniature.write([
-      //   0x01, 0x06, 0x60, 0x40, 0x00, 0x10, 0x97, 0xd2
-      // ])
-      // this.fullscreenLoading = false
+      this.fullscreenLoading = true
+      // 急停
+      console.log('主机发送数据 - 控制给定（急停）')
+      this.usbPortMiniature.write([
+        0x01, 0x06, 0x60, 0x40, 0x00, 0x10, 0x97, 0xd2
+      ])
+      this.fullscreenLoading = false
 
       this.endTimeMiniature = this.$moment().format('YYYY-MM-DD HH:mm:ss')
 
@@ -873,13 +872,13 @@ export default {
     handleRestoreMiniature() {
       this.isMiniatureStop = false
 
-      // this.fullscreenLoading = true
-      // // 恢复
-      // console.log('主机发送数据 - 控制给定（恢复）')
-      // this.usbPortMiniature.write([
-      //   0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
-      // ])
-      // this.fullscreenLoading = false
+      this.fullscreenLoading = true
+      // 恢复
+      console.log('主机发送数据 - 控制给定（恢复）')
+      this.usbPortMiniature.write([
+        0x01, 0x06, 0x60, 0x40, 0x00, 0x08, 0x97, 0xd8
+      ])
+      this.fullscreenLoading = false
 
       this.startTimeMiniature = this.$moment().format('YYYY-MM-DD HH:mm:ss')
     },
