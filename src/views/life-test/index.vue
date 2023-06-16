@@ -1,7 +1,7 @@
 <!--
  * @Author      : Mr.bin
  * @Date        : 2023-05-16 09:29:06
- * @LastEditTime: 2023-06-16 11:31:14
+ * @LastEditTime: 2023-06-16 17:31:04
  * @Description : 寿命测试
 -->
 <template>
@@ -766,7 +766,7 @@ export default {
      * @description: 暂停（微型）
      */
     handleStopMiniature() {
-      this.isMiniatureStop = true
+      this.isMiniatureStop = false
 
       // this.fullscreenLoading = true
       // // 急停
@@ -871,7 +871,7 @@ export default {
      * @description: 继续（微型）
      */
     handleRestoreMiniature() {
-      this.isMiniatureStop = false
+      this.isMiniatureStop = true
 
       // this.fullscreenLoading = true
       // // 恢复
